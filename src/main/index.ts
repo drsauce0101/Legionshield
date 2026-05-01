@@ -3,6 +3,7 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { initDatabase } from './database'
 import { registerIpcHandlers } from './ipc-handlers'
+// @ts-ignore
 import icon from '../../resources/icon.png?asset'
 
 function createWindow(): void {

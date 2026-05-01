@@ -100,3 +100,13 @@
 @layer utilities {
   .text-select { user-select: text; }
 }
+
+/* ── Tiptap / ProseMirror ──────────────────────────────────────────────── */
+.ProseMirror {
+  @apply focus:outline-none min-h-[200px] text-select text-dark-100;
+}
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  @apply text-dark-500 pointer-events-none h-0;
+}

@@ -12,6 +12,10 @@
     "build:win": "npm run build && electron-builder --win"
   },
   "dependencies": {
+    "@tiptap/extension-placeholder": "^3.22.5",
+    "@tiptap/react": "^3.22.5",
+    "@tiptap/starter-kit": "^3.22.5",
+    "dddice-js": "^0.20.5",
     "lucide-react": "^0.441.0",
     "node-sqlite3-wasm": "^0.8.56",
     "react": "^18.3.1",
@@ -21,6 +25,7 @@
   "devDependencies": {
     "@electron-toolkit/preload": "^3.0.1",
     "@electron-toolkit/utils": "^3.0.0",
+    "@tailwindcss/typography": "^0.5.19",
     "@types/node": "^20.14.8",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",

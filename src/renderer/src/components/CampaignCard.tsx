@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Edit3, Trash2, Sword, Calendar } from 'lucide-react'
-import type { Campaign } from '../../../../types'
+import type { Campaign } from '../../../types'
 
 interface CampaignCardProps {
   campaign: Campaign

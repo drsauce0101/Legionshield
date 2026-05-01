@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { Plus, Search, Swords, Loader2 } from 'lucide-react'
 import { CampaignCard } from './CampaignCard'
 import { useCampaignStore } from '../stores/useCampaignStore'
-import type { Campaign } from '../../../../types'
+import type { Campaign } from '../../../types'
 
 interface CampaignGridProps {
   searchQuery: string

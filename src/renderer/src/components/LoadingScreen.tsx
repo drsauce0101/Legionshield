@@ -1,4 +1,5 @@
 import React from 'react'
+// @ts-ignore
 import loadingSymbol from '../assets/loading-symbol.svg'
 
 interface LoadingScreenProps {

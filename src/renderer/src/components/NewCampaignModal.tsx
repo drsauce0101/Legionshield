@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { X, Image, ChevronDown, Loader2, Swords } from 'lucide-react'
 import { useCampaignStore } from '../stores/useCampaignStore'
-import type { Campaign, CampaignFormData } from '../../../../types'
+import type { Campaign, CampaignFormData } from '../../../types'
 
 interface NewCampaignModalProps {
   editTarget?: Campaign | null
