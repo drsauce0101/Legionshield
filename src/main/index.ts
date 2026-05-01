@@ -3,6 +3,7 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { initDatabase } from './database'
 import { registerIpcHandlers } from './ipc-handlers'
+import icon from '../../resources/icon.png?asset'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -14,6 +15,7 @@ function createWindow(): void {
     frame: false,               // Custom title bar
     titleBarStyle: 'hidden',
     backgroundColor: '#0d0e13', // Match dark bg before paint
+    icon: icon,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
