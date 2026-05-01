@@ -61,9 +61,11 @@ export default function App(): JSX.Element {
 
       {/* Main Content Area */}
       {activeCampaign ? (
-        <CampaignDashboard onBack={() => setActiveCampaign(null)} />
+        <div className="flex-1 flex flex-col min-h-0 animate-fade-in">
+          <CampaignDashboard onBack={() => setActiveCampaign(null)} />
+        </div>
       ) : (
-        <>
+        <div className="flex-1 flex flex-col overflow-y-auto animate-fade-in">
           {/* Hero / Toolbar */}
           <div className="relative flex-shrink-0 px-6 pt-6 pb-4 border-b border-white/20 bg-dark-950">
             <div className="relative flex items-center justify-between gap-4">
@@ -110,7 +112,7 @@ export default function App(): JSX.Element {
               onEditCampaign={handleOpenEdit}
             />
           </main>
-        </>
+        </div>
       )}
 
       {/* Modal */}

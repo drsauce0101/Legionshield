@@ -13,22 +13,16 @@ export function SessionModal({ editTarget, onClose }: SessionModalProps): JSX.El
   const { createSession, updateSession, activeCampaign, playersList } = useCampaignStore()
   
   const [formData, setFormData] = useState<SessionFormData>({
-    title: '',
-    tags: '',
-    notes: '',
-    campaign_id: activeCampaign?.id || 0
+    title: editTarget?.title || '',
+    tags: editTarget?.tags || '',
+    notes: editTarget?.notes || '',
+    campaign_id: editTarget?.campaign_id || activeCampaign?.id || 0
   })
   
   const [selectedPlayers, setSelectedPlayers] = useState<number[]>([])
 
   useEffect(() => {
     if (editTarget) {
-      setFormData({
-        title: editTarget.title,
-        tags: editTarget.tags,
-        notes: editTarget.notes,
-        campaign_id: editTarget.campaign_id
-      })
       // fetch present players for editTarget
       window.api.sessions.getPresentPlayers(editTarget.id).then(setSelectedPlayers).catch(console.error)
     }

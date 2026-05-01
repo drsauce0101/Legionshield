@@ -13,6 +13,7 @@ export function initDatabase(): void {
   db = new Database(dbPath)
 
   createTables()
+  runMigrations()
   seedDefaultData()
 }
 
@@ -41,6 +42,7 @@ function createTables(): void {
       name            TEXT NOT NULL,
       class_archetype TEXT DEFAULT '',
       notes           TEXT DEFAULT '',
+      avatar_url      TEXT DEFAULT '',
       created_at      TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
     );
@@ -63,6 +65,15 @@ function createTables(): void {
       FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE
     );
   `)
+}
+
+function runMigrations(): void {
+  // Check if avatar_url exists in players table
+  try {
+    db.run('ALTER TABLE players ADD COLUMN avatar_url TEXT DEFAULT ""')
+  } catch (err) {
+    // Column might already exist, ignore error
+  }
 }
 
 function seedDefaultData(): void {
@@ -144,8 +155,8 @@ export function getPlayersByCampaign(campaignId: number): any[] {
 
 export function createPlayer(data: any): any {
   db.run(
-    `INSERT INTO players (campaign_id, name, class_archetype, notes) VALUES (?, ?, ?, ?)`,
-    [data.campaign_id, data.name, data.class_archetype, data.notes]
+    `INSERT INTO players (campaign_id, name, class_archetype, notes, avatar_url) VALUES (?, ?, ?, ?, ?)`,
+    [data.campaign_id, data.name, data.class_archetype, data.notes, data.avatar_url || '']
   )
   const lastId = (db.get('SELECT last_insert_rowid() as id') as { id: number }).id
   return db.get(`SELECT * FROM players WHERE id = ?`, [lastId])

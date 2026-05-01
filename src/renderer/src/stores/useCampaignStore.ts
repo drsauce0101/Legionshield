@@ -9,6 +9,7 @@ interface CampaignStore {
   playersList: Player[]
   sessionsList: Session[]
   activeSession: Session | null
+  activePlayer: Player | null
   isLoading: boolean
   error: string | null
 
@@ -26,6 +27,7 @@ interface CampaignStore {
   createPlayer: (data: PlayerFormData) => Promise<void>
   updatePlayer: (id: number, data: Partial<PlayerFormData>) => Promise<void>
   deletePlayer: (id: number) => Promise<void>
+  setActivePlayer: (player: Player | null) => void
 
   // Sessions
   fetchSessions: (campaignId: number) => Promise<void>
@@ -42,6 +44,7 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
   playersList: [],
   sessionsList: [],
   activeSession: null,
+  activePlayer: null,
   isLoading: false,
   error: null,
 
@@ -131,7 +134,8 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
     try {
       const updated = await window.api.players.update(id, data)
       set((state) => ({
-        playersList: state.playersList.map((p) => (p.id === id ? updated : p))
+        playersList: state.playersList.map((p) => (p.id === id ? updated : p)),
+        activePlayer: state.activePlayer?.id === id ? updated : state.activePlayer
       }))
     } catch (err) {
       set({ error: String(err) })
@@ -143,7 +147,8 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
     try {
       await window.api.players.delete(id)
       set((state) => ({
-        playersList: state.playersList.filter((p) => p.id !== id)
+        playersList: state.playersList.filter((p) => p.id !== id),
+        activePlayer: state.activePlayer?.id === id ? null : state.activePlayer
       }))
     } catch (err) {
       set({ error: String(err) })
@@ -197,5 +202,6 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
     }
   },
 
-  setActiveSession: (session) => set({ activeSession: session })
+  setActiveSession: (session) => set({ activeSession: session, activePlayer: null }),
+  setActivePlayer: (player) => set({ activePlayer: player, activeSession: null })
 }))

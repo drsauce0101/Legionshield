@@ -13,22 +13,12 @@ export function PlayerModal({ editTarget, onClose }: PlayerModalProps): JSX.Elem
   const { createPlayer, updatePlayer, activeCampaign } = useCampaignStore()
   
   const [formData, setFormData] = useState<PlayerFormData>({
-    name: '',
-    class_archetype: '',
-    notes: '',
-    campaign_id: activeCampaign?.id || 0
+    name: editTarget?.name || '',
+    class_archetype: editTarget?.class_archetype || '',
+    notes: editTarget?.notes || '',
+    avatar_url: editTarget?.avatar_url || '',
+    campaign_id: editTarget?.campaign_id || activeCampaign?.id || 0
   })
-
-  useEffect(() => {
-    if (editTarget) {
-      setFormData({
-        name: editTarget.name,
-        class_archetype: editTarget.class_archetype,
-        notes: editTarget.notes,
-        campaign_id: editTarget.campaign_id
-      })
-    }
-  }, [editTarget])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -88,6 +78,28 @@ export function PlayerModal({ editTarget, onClose }: PlayerModalProps): JSX.Elem
                 onChange={(e) => setFormData(prev => ({ ...prev, class_archetype: e.target.value }))}
                 className="input-field w-full text-select"
                 placeholder="Ex: Mago Nível 20"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-xs font-semibold tracking-wider text-dark-300 uppercase">
+              Foto de Perfil (URL da Imagem)
+            </label>
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 flex-shrink-0 bg-dark-950 border border-white/20 flex items-center justify-center overflow-hidden">
+                {formData.avatar_url ? (
+                  <img src={formData.avatar_url} alt="Avatar Preview" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-dark-600 text-xs text-center leading-none">Sem<br/>Foto</span>
+                )}
+              </div>
+              <input
+                type="text"
+                value={formData.avatar_url}
+                onChange={(e) => setFormData(prev => ({ ...prev, avatar_url: e.target.value }))}
+                className="input-field w-full text-select"
+                placeholder="https://exemplo.com/foto.png"
               />
             </div>
           </div>

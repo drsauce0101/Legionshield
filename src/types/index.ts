@@ -28,6 +28,7 @@ export interface Player {
   name: string
   class_archetype: string
   notes: string // HTML from Rich Text
+  avatar_url?: string
   created_at?: string
 }
 
@@ -35,6 +36,7 @@ export interface PlayerFormData {
   name: string
   class_archetype: string
   notes: string
+  avatar_url?: string
   campaign_id: number
 }
 
