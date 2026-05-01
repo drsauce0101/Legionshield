@@ -3,6 +3,7 @@ import { Plus, Search, Shield } from 'lucide-react'
 import { TitleBar } from './components/TitleBar'
 import { CampaignGrid } from './components/CampaignGrid'
 import { NewCampaignModal } from './components/NewCampaignModal'
+import { LoadingScreen } from './components/LoadingScreen'
 import { useCampaignStore } from './stores/useCampaignStore'
 import type { Campaign } from '../../types'
 
@@ -11,9 +12,15 @@ export default function App(): JSX.Element {
   const [modalOpen, setModalOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<Campaign | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [isAppLoading, setIsAppLoading] = useState(true)
 
   useEffect(() => {
-    fetchCampaigns()
+    Promise.all([
+      fetchCampaigns(),
+      new Promise((resolve) => setTimeout(resolve, 1500)) // Artificial delay to show the loading screen
+    ]).finally(() => {
+      setIsAppLoading(false)
+    })
   }, [fetchCampaigns])
 
   const handleOpenNew = () => {
@@ -33,6 +40,8 @@ export default function App(): JSX.Element {
 
   return (
     <div className="flex flex-col h-screen bg-dark-950 overflow-hidden">
+      <LoadingScreen isVisible={isAppLoading} />
+
       {/* Custom Title Bar */}
       <TitleBar />
 
