@@ -74,14 +74,14 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
   }, [activeCampaign, fetchPlayers, fetchSessions])
 
   useEffect(() => {
-    if (activeSession) {
+    if (activeSession && !sessionModalOpen) {
       window.api.sessions.getPresentPlayers(activeSession.id)
         .then(setPresentPlayerIds)
         .catch(console.error)
-    } else {
+    } else if (!activeSession) {
       setPresentPlayerIds([])
     }
-  }, [activeSession?.id])
+  }, [activeSession?.id, sessionModalOpen])
 
   const handleOpenPlayerNew = () => {
     setEditPlayerTarget(null)
@@ -106,11 +106,7 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
   // Handle auto-save for session notes
   const handleSessionNotesChange = (notes: string) => {
     if (activeSession) {
-      // In a real scenario we'd debounce this. For now we just update
-      // Since updateSession requires playerIds, we fetch them or just don't update players here
-      window.api.sessions.getPresentPlayers(activeSession.id).then(playerIds => {
-        updateSession(activeSession.id, { notes }, playerIds)
-      })
+      updateSession(activeSession.id, { notes })
     }
   }
 
@@ -263,7 +259,7 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
             <p className="max-w-md">Selecione uma sessão ou um jogador na lateral para visualizar ou editar as anotações. Você pode usar o espaço para escrever registros da aventura.</p>
           </div>
         ) : activeSession ? (
-          <div className="flex-1 flex flex-col animate-fade-in" key={`session-${activeSession.id}`}>
+          <div className="flex-1 flex flex-col animate-fade-in min-h-0" key={`session-${activeSession.id}`}>
             <header className="p-8 pb-4 shrink-0 border-b border-white/5">
               <h1 className="text-3xl font-display font-bold text-white mb-2">{activeSession.title}</h1>
               <div className="flex gap-2 mb-4">
@@ -315,7 +311,7 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
             </div>
           </div>
         ) : activePlayer ? (
-          <div className="flex-1 flex flex-col animate-fade-in" key={`player-${activePlayer.id}`}>
+          <div className="flex-1 flex flex-col animate-fade-in min-h-0" key={`player-${activePlayer.id}`}>
             <header className="p-8 pb-6 shrink-0 border-b border-white/5 flex items-end gap-6">
               <div className="w-32 h-32 flex-shrink-0 bg-dark-950 border border-white/20 flex items-center justify-center overflow-hidden shadow-2xl">
                 {activePlayer.avatar_url ? (

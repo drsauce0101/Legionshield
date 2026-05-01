@@ -1,4 +1,6 @@
-import { ipcMain } from 'electron'
+import { ipcMain, dialog, app } from 'electron'
+import fs from 'fs'
+import path from 'path'
 import {
   getCampaigns,
   createCampaign,
@@ -76,5 +78,37 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('sessions:getPresentPlayers', (_event, sessionId: number) => {
     return getPresentPlayers(sessionId)
+  })
+
+  // ── System ─────────────────────────────────────────────────────────────────
+  ipcMain.handle('system:selectImage', async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+      title: 'Selecione uma imagem',
+      properties: ['openFile'],
+      filters: [
+        { name: 'Imagens', extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif'] }
+      ]
+    })
+
+    if (canceled || filePaths.length === 0) {
+      return null
+    }
+
+    const sourcePath = filePaths[0]
+    const userDataPath = app.getPath('userData')
+    const imagesDir = path.join(userDataPath, 'images')
+
+    if (!fs.existsSync(imagesDir)) {
+      fs.mkdirSync(imagesDir, { recursive: true })
+    }
+
+    const fileName = `img_${Date.now()}_${path.basename(sourcePath)}`
+    const destPath = path.join(imagesDir, fileName)
+
+    fs.copyFileSync(sourcePath, destPath)
+
+    // Apenas retornamos o nome do arquivo, a resolução do caminho real
+    // é feita pelo protocolo 'local' lá no main/index.ts
+    return `local://${encodeURIComponent(fileName)}`
   })
 }

@@ -25,6 +25,9 @@ const api = {
     delete: (id: number) => ipcRenderer.invoke('sessions:delete', id),
     getPresentPlayers: (sessionId: number) => ipcRenderer.invoke('sessions:getPresentPlayers', sessionId)
   },
+  system: {
+    selectImage: () => ipcRenderer.invoke('system:selectImage')
+  },
   window: {
     minimize: () => ipcRenderer.send('window:minimize'),
     maximize: () => ipcRenderer.send('window:maximize'),

@@ -86,12 +86,15 @@ export interface ElectronAPI {
   sessions: {
     getByCampaign: (campaignId: number) => Promise<Session[]>
     create: (data: SessionFormData, playerIds: number[]) => Promise<Session>
-    update: (id: number, data: Partial<SessionFormData>, playerIds: number[]) => Promise<Session>
+    update: (id: number, data: Partial<SessionFormData>, playerIds?: number[]) => Promise<Session>
     delete: (id: number) => Promise<void>
     getPresentPlayers: (sessionId: number) => Promise<number[]>
   }
   systems: {
     getAll: () => Promise<RPGSystem[]>
+  }
+  system: {
+    selectImage: () => Promise<string | null>
   }
   window: {
     minimize: () => void

@@ -1,10 +1,14 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, protocol } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { initDatabase } from './database'
 import { registerIpcHandlers } from './ipc-handlers'
 // @ts-ignore
 import icon from '../../resources/icon.png?asset'
+
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'local', privileges: { bypassCSP: true, supportFetchAPI: true, secure: true } }
+])
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -51,6 +55,35 @@ function createWindow(): void {
 
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.legionshield.app')
+
+  protocol.handle('local', (request) => {
+    try {
+      let fileName = request.url.slice('local://'.length)
+      if (fileName.startsWith('/')) fileName = fileName.slice(1)
+      fileName = decodeURIComponent(fileName)
+      
+      const fs = require('fs')
+      const path = require('path')
+      const userDataPath = app.getPath('userData')
+      const filePath = path.join(userDataPath, 'images', fileName)
+      
+      const buffer = fs.readFileSync(filePath)
+      
+      // Determine basic MIME type
+      const ext = filePath.split('.').pop()?.toLowerCase() || 'png'
+      let mimeType = 'image/png'
+      if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg'
+      else if (ext === 'webp') mimeType = 'image/webp'
+      else if (ext === 'gif') mimeType = 'image/gif'
+      
+      return new Response(buffer, {
+        headers: { 'Content-Type': mimeType }
+      })
+    } catch (e) {
+      console.error('Local Protocol Error:', e)
+      return new Response('File not found', { status: 404 })
+    }
+  })
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)

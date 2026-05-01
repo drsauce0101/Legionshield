@@ -5,12 +5,14 @@ import Placeholder from '@tiptap/extension-placeholder'
 import Underline from '@tiptap/extension-underline'
 import TextAlign from '@tiptap/extension-text-align'
 import Link from '@tiptap/extension-link'
+import ImageExtension from '@tiptap/extension-image'
+import ImageResize from 'tiptap-extension-resize-image'
 import Mention from '@tiptap/extension-mention'
 import tippy, { delegate } from 'tippy.js'
 import 'tippy.js/dist/tippy.css'
 import { getMentionSuggestion } from './mentionSuggestion'
 import type { MentionItem } from '../../../types'
-import { Bold, Italic, List, ListOrdered, Strikethrough, Underline as UnderlineIcon, AlignLeft, AlignCenter, AlignRight, Link as LinkIcon, Heading1, Heading2, Heading3, Maximize2, Minimize2 } from 'lucide-react'
+import { Bold, Italic, List, ListOrdered, Strikethrough, Underline as UnderlineIcon, AlignLeft, AlignCenter, AlignRight, Link as LinkIcon, Image as ImageIcon, Heading1, Heading2, Heading3, Maximize2, Minimize2 } from 'lucide-react'
 
 interface RichTextEditorProps {
   content: string
@@ -32,6 +34,9 @@ export function RichTextEditor({ content, onChange, placeholder = 'Escreva aqui.
       Underline,
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Link.configure({ openOnClick: false }),
+      ImageResize.configure({
+        inline: true
+      }),
       Mention.configure({
         HTMLAttributes: {
           class: 'bg-blue-500/20 text-blue-400 font-semibold px-1 py-0.5 rounded cursor-pointer hover:bg-blue-500/30 transition-colors',
@@ -115,11 +120,22 @@ export function RichTextEditor({ content, onChange, placeholder = 'Escreva aqui.
     editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
   }
 
+  const insertImage = async () => {
+    try {
+      const url = await window.api.system.selectImage()
+      if (url) {
+        editor.chain().focus().setImage({ src: url }).run()
+      }
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
   return (
     <div 
       ref={containerRef}
       onClick={handleEditorClick}
-      className={`flex flex-col w-full border rounded-none transition-all duration-300 ${
+      className={`flex flex-col w-full h-full flex-1 min-h-0 border rounded-none transition-all duration-300 ${
       isFullscreen 
         ? 'fixed inset-0 z-50 bg-dark-900 border-none' 
         : `relative ${readOnly ? 'border-transparent' : 'border-white/20 bg-dark-900'}`
@@ -243,6 +259,14 @@ export function RichTextEditor({ content, onChange, placeholder = 'Escreva aqui.
           >
             <LinkIcon className="w-4 h-4" />
           </button>
+          <button
+            type="button"
+            onClick={insertImage}
+            className="p-1.5 rounded-none text-dark-300 hover:text-white transition-colors"
+            title="Inserir Imagem do Computador"
+          >
+            <ImageIcon className="w-4 h-4" />
+          </button>
 
           <div className="flex-1" />
 
@@ -258,7 +282,7 @@ export function RichTextEditor({ content, onChange, placeholder = 'Escreva aqui.
       )}
 
       {/* Editor Content */}
-      <div className={`p-4 flex-1 overflow-y-auto min-h-[300px] ${isFullscreen ? 'max-w-4xl mx-auto w-full' : ''} ${readOnly ? 'p-0 min-h-0' : ''}`}>
+      <div className={`p-4 flex-1 overflow-y-auto min-h-[150px] ${isFullscreen ? 'max-w-4xl mx-auto w-full' : ''} ${readOnly ? 'p-0 min-h-0' : ''}`}>
         <div className="prose prose-invert prose-p:leading-relaxed max-w-none w-full">
           <EditorContent editor={editor} />
         </div>

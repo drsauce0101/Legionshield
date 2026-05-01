@@ -51,6 +51,18 @@ export function NewCampaignModal({ editTarget, onClose }: NewCampaignModalProps)
     if (name === 'banner_url') setBannerPreview(value)
   }
 
+  const handleSelectImage = async () => {
+    try {
+      const url = await window.api.system.selectImage()
+      if (url) {
+        setForm(prev => ({ ...prev, banner_url: url }))
+        setBannerPreview(url)
+      }
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.name.trim()) return
@@ -160,18 +172,26 @@ export function NewCampaignModal({ editTarget, onClose }: NewCampaignModalProps)
 
           {/* Banner URL */}
           <div>
-            <label htmlFor="input-banner" className="form-label">URL da Imagem de Banner</label>
+            <label htmlFor="input-banner" className="form-label">Imagem de Banner</label>
             <div className="flex gap-2 items-start">
-              <div className="flex-1">
+              <div className="flex-1 flex gap-2">
                 <input
                   id="input-banner"
                   name="banner_url"
-                  type="url"
+                  type="text"
                   value={form.banner_url}
                   onChange={handleChange}
-                  placeholder="https://..."
-                  className="input-field text-select"
+                  placeholder="URL ou arquivo local..."
+                  className="input-field text-select flex-1"
                 />
+                <button
+                  type="button"
+                  onClick={handleSelectImage}
+                  className="px-3 py-2 bg-dark-800 border border-white/20 text-white hover:bg-dark-700 transition-colors flex items-center justify-center"
+                  title="Selecionar imagem do computador"
+                >
+                  <Image className="w-4 h-4" />
+                </button>
               </div>
               {/* Preview thumbnail */}
               {bannerPreview && (
@@ -190,7 +210,7 @@ export function NewCampaignModal({ editTarget, onClose }: NewCampaignModalProps)
                 </div>
               )}
             </div>
-            <p className="text-xs text-dark-500 mt-1">Cole a URL de uma imagem para usar como banner do card.</p>
+            <p className="text-xs text-dark-500 mt-1">Cole a URL ou selecione uma imagem do seu computador.</p>
           </div>
 
           {/* Actions */}

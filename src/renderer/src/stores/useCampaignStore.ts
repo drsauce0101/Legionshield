@@ -32,7 +32,7 @@ interface CampaignStore {
   // Sessions
   fetchSessions: (campaignId: number) => Promise<void>
   createSession: (data: SessionFormData, playerIds: number[]) => Promise<Session>
-  updateSession: (id: number, data: Partial<SessionFormData>, playerIds: number[]) => Promise<void>
+  updateSession: (id: number, data: Partial<SessionFormData>, playerIds?: number[]) => Promise<void>
   deleteSession: (id: number) => Promise<void>
   setActiveSession: (session: Session | null) => void
 }
@@ -176,7 +176,7 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
     }
   },
 
-  updateSession: async (id: number, data: Partial<SessionFormData>, playerIds: number[]) => {
+  updateSession: async (id: number, data: Partial<SessionFormData>, playerIds?: number[]) => {
     try {
       const updated = await window.api.sessions.update(id, data, playerIds)
       set((state) => ({

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { X } from 'lucide-react'
+import { X, Image } from 'lucide-react'
 import { useCampaignStore } from '../stores/useCampaignStore'
 import { RichTextEditor } from './RichTextEditor'
 import type { Player, PlayerFormData, MentionItem } from '../../../types'
@@ -19,6 +19,17 @@ export function PlayerModal({ editTarget, onClose }: PlayerModalProps): JSX.Elem
     avatar_url: editTarget?.avatar_url || '',
     campaign_id: editTarget?.campaign_id || activeCampaign?.id || 0
   })
+
+  const handleSelectImage = async () => {
+    try {
+      const url = await window.api.system.selectImage()
+      if (url) {
+        setFormData(prev => ({ ...prev, avatar_url: url }))
+      }
+    } catch (err) {
+      console.error(err)
+    }
+  }
 
   // Generate mentionable items
   const mentionItems: MentionItem[] = React.useMemo(() => {
@@ -113,7 +124,7 @@ export function PlayerModal({ editTarget, onClose }: PlayerModalProps): JSX.Elem
 
           <div className="space-y-2">
             <label className="block text-xs font-semibold tracking-wider text-dark-300 uppercase">
-              Foto de Perfil (URL da Imagem)
+              Foto de Perfil
             </label>
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 flex-shrink-0 bg-dark-950 border border-white/20 flex items-center justify-center overflow-hidden">
@@ -123,13 +134,23 @@ export function PlayerModal({ editTarget, onClose }: PlayerModalProps): JSX.Elem
                   <span className="text-dark-600 text-xs text-center leading-none">Sem<br/>Foto</span>
                 )}
               </div>
-              <input
-                type="text"
-                value={formData.avatar_url}
-                onChange={(e) => setFormData(prev => ({ ...prev, avatar_url: e.target.value }))}
-                className="input-field w-full text-select"
-                placeholder="https://exemplo.com/foto.png"
-              />
+              <div className="flex-1 flex gap-2">
+                <input
+                  type="text"
+                  value={formData.avatar_url || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, avatar_url: e.target.value }))}
+                  className="input-field w-full text-select flex-1"
+                  placeholder="URL ou arquivo local..."
+                />
+                <button
+                  type="button"
+                  onClick={handleSelectImage}
+                  className="px-3 py-2 bg-dark-800 border border-white/20 text-white hover:bg-dark-700 transition-colors flex items-center justify-center"
+                  title="Selecionar imagem do computador"
+                >
+                  <Image className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
 
