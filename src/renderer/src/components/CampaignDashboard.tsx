@@ -5,7 +5,7 @@ import { DiceRoller } from './DiceRoller'
 import { PlayerModal } from './PlayerModal'
 import { SessionModal } from './SessionModal'
 import { RichTextEditor } from './RichTextEditor'
-import type { Player, Session } from '../../../types'
+import type { Player, Session, MentionItem } from '../../../types'
 
 interface CampaignDashboardProps {
   onBack: () => void
@@ -37,6 +37,34 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
 
   const [presentPlayerIds, setPresentPlayerIds] = useState<number[]>([])
   const [previewPlayer, setPreviewPlayer] = useState<Player | null>(null)
+
+  // Generate mentionable items
+  const mentionItems: MentionItem[] = React.useMemo(() => {
+    return [
+      ...playersList.map(p => ({ id: `player_${p.id}`, label: p.name, type: 'player' as const, avatar_url: p.avatar_url })),
+      ...sessionsList.map(s => ({ id: `session_${s.id}`, label: s.title, type: 'session' as const })),
+      ...(activeCampaign ? [{ id: `campaign_${activeCampaign.id}`, label: activeCampaign.name, type: 'campaign' as const }] : [])
+    ]
+  }, [playersList, sessionsList, activeCampaign])
+
+  const handleMentionClick = (id: string) => {
+    const [type, rawId] = id.split('_')
+    const numericId = Number(rawId)
+
+    if (type === 'player') {
+      const player = playersList.find(p => p.id === numericId)
+      if (player) {
+        setActiveTab('players')
+        setActivePlayer(player)
+      }
+    } else if (type === 'session') {
+      const session = sessionsList.find(s => s.id === numericId)
+      if (session) {
+        setActiveTab('sessions')
+        setActiveSession(session)
+      }
+    }
+  }
 
   useEffect(() => {
     if (activeCampaign) {
@@ -280,6 +308,8 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
                   content={activeSession.notes} 
                   onChange={handleSessionNotesChange} 
                   placeholder="A aventura continua..."
+                  mentionItems={mentionItems}
+                  onMentionClick={handleMentionClick}
                 />
               </div>
             </div>
@@ -307,6 +337,8 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
                   content={activePlayer.notes} 
                   onChange={(notes) => updatePlayer(activePlayer.id, { notes })} 
                   placeholder="Anotações do jogador..."
+                  mentionItems={mentionItems}
+                  onMentionClick={handleMentionClick}
                 />
               </div>
             </div>

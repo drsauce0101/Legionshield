@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@tiptap/extension-link": "^3.22.5",
+    "@tiptap/extension-mention": "^3.22.5",
     "@tiptap/extension-placeholder": "^3.22.5",
     "@tiptap/extension-text-align": "^3.22.5",
     "@tiptap/extension-underline": "^3.22.5",
@@ -23,6 +24,7 @@
     "node-sqlite3-wasm": "^0.8.56",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "tippy.js": "^6.3.7",
     "zustand": "^4.5.5"
   },
   "devDependencies": {

@@ -61,6 +61,13 @@ export interface SessionPlayer {
   player_id: number
 }
 
+export type MentionItem = {
+  id: string | number
+  label: string
+  type: 'player' | 'session' | 'campaign'
+  avatar_url?: string
+}
+
 // ─── Electron API (exposed via contextBridge) ─────────────────────────────────
 
 export interface ElectronAPI {

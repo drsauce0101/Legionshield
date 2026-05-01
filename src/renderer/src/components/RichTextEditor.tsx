@@ -1,10 +1,15 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import Underline from '@tiptap/extension-underline'
 import TextAlign from '@tiptap/extension-text-align'
 import Link from '@tiptap/extension-link'
+import Mention from '@tiptap/extension-mention'
+import tippy, { delegate } from 'tippy.js'
+import 'tippy.js/dist/tippy.css'
+import { getMentionSuggestion } from './mentionSuggestion'
+import type { MentionItem } from '../../../types'
 import { Bold, Italic, List, ListOrdered, Strikethrough, Underline as UnderlineIcon, AlignLeft, AlignCenter, AlignRight, Link as LinkIcon, Heading1, Heading2, Heading3, Maximize2, Minimize2 } from 'lucide-react'
 
 interface RichTextEditorProps {
@@ -12,10 +17,13 @@ interface RichTextEditorProps {
   onChange: (content: string) => void
   placeholder?: string
   readOnly?: boolean
+  mentionItems?: MentionItem[]
+  onMentionClick?: (id: string) => void
 }
 
-export function RichTextEditor({ content, onChange, placeholder = 'Escreva aqui...', readOnly = false }: RichTextEditorProps): JSX.Element {
+export function RichTextEditor({ content, onChange, placeholder = 'Escreva aqui...', readOnly = false, mentionItems = [], onMentionClick }: RichTextEditorProps): JSX.Element {
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const containerRef = React.useRef<HTMLDivElement>(null)
 
   const editor = useEditor({
     extensions: [
@@ -23,7 +31,13 @@ export function RichTextEditor({ content, onChange, placeholder = 'Escreva aqui.
       Placeholder.configure({ placeholder }),
       Underline,
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
-      Link.configure({ openOnClick: false })
+      Link.configure({ openOnClick: false }),
+      Mention.configure({
+        HTMLAttributes: {
+          class: 'bg-blue-500/20 text-blue-400 font-semibold px-1 py-0.5 rounded cursor-pointer hover:bg-blue-500/30 transition-colors',
+        },
+        suggestion: getMentionSuggestion(mentionItems)
+      })
     ],
     content,
     editable: !readOnly,
@@ -31,6 +45,57 @@ export function RichTextEditor({ content, onChange, placeholder = 'Escreva aqui.
       onChange(editor.getHTML())
     }
   })
+
+  // Handle tippy hover previews
+  React.useEffect(() => {
+    if (!containerRef.current || !mentionItems.length) return
+
+    const tippyInstance = delegate(containerRef.current, {
+      target: '[data-type="mention"]',
+      allowHTML: true,
+      interactive: true,
+      placement: 'top',
+      animation: 'shift-away',
+      appendTo: () => document.body,
+      onShow(instance) {
+        const id = instance.reference.getAttribute('data-id')
+        const item = mentionItems.find(i => String(i.id) === String(id))
+        if (item) {
+          const typeLabels = { player: 'Jogador', session: 'Sessão', campaign: 'Campanha' }
+          const avatarHtml = item.type === 'player' && item.avatar_url 
+            ? `<div class="w-10 h-10 flex-shrink-0 bg-dark-950 border border-white/20"><img src="${item.avatar_url}" class="w-full h-full object-cover" /></div>`
+            : item.type === 'player'
+              ? `<div class="w-10 h-10 flex-shrink-0 bg-dark-950 border border-white/20 flex items-center justify-center font-bold text-dark-500 uppercase">${item.label.charAt(0)}</div>`
+              : ''
+              
+          instance.setContent(`
+            <div class="flex items-center gap-3 p-3 bg-dark-900 border border-white/20 shadow-2xl animate-fade-in" style="min-width: 200px;">
+               ${avatarHtml}
+               <div>
+                 <div class="text-white font-bold text-sm mb-0.5">${item.label}</div>
+                 <div class="text-dark-400 text-[10px] font-semibold uppercase tracking-wider">${typeLabels[item.type]}</div>
+               </div>
+            </div>
+          `)
+        } else {
+          return false
+        }
+      }
+    })
+
+    return () => tippyInstance.destroy()
+  }, [mentionItems])
+
+  const handleEditorClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement
+    const mentionEl = target.closest('[data-type="mention"]')
+    if (mentionEl) {
+      const id = mentionEl.getAttribute('data-id')
+      if (id && onMentionClick) {
+        onMentionClick(id)
+      }
+    }
+  }
 
   if (!editor) return <div className="min-h-[200px]" />
 
@@ -51,7 +116,10 @@ export function RichTextEditor({ content, onChange, placeholder = 'Escreva aqui.
   }
 
   return (
-    <div className={`flex flex-col w-full border rounded-none transition-all duration-300 ${
+    <div 
+      ref={containerRef}
+      onClick={handleEditorClick}
+      className={`flex flex-col w-full border rounded-none transition-all duration-300 ${
       isFullscreen 
         ? 'fixed inset-0 z-50 bg-dark-900 border-none' 
         : `relative ${readOnly ? 'border-transparent' : 'border-white/20 bg-dark-900'}`

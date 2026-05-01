@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
 import { useCampaignStore } from '../stores/useCampaignStore'
 import { RichTextEditor } from './RichTextEditor'
-import type { Player, PlayerFormData } from '../../../types'
+import type { Player, PlayerFormData, MentionItem } from '../../../types'
 
 interface PlayerModalProps {
   editTarget: Player | null
@@ -10,7 +10,7 @@ interface PlayerModalProps {
 }
 
 export function PlayerModal({ editTarget, onClose }: PlayerModalProps): JSX.Element {
-  const { createPlayer, updatePlayer, activeCampaign } = useCampaignStore()
+  const { createPlayer, updatePlayer, activeCampaign, playersList, sessionsList } = useCampaignStore()
   
   const [formData, setFormData] = useState<PlayerFormData>({
     name: editTarget?.name || '',
@@ -19,6 +19,35 @@ export function PlayerModal({ editTarget, onClose }: PlayerModalProps): JSX.Elem
     avatar_url: editTarget?.avatar_url || '',
     campaign_id: editTarget?.campaign_id || activeCampaign?.id || 0
   })
+
+  // Generate mentionable items
+  const mentionItems: MentionItem[] = React.useMemo(() => {
+    return [
+      ...playersList.map(p => ({ id: `player_${p.id}`, label: p.name, type: 'player' as const, avatar_url: p.avatar_url })),
+      ...sessionsList.map(s => ({ id: `session_${s.id}`, label: s.title, type: 'session' as const })),
+      ...(activeCampaign ? [{ id: `campaign_${activeCampaign.id}`, label: activeCampaign.name, type: 'campaign' as const }] : [])
+    ]
+  }, [playersList, sessionsList, activeCampaign])
+
+  const handleMentionClick = (id: string) => {
+    const [type, rawId] = id.split('_')
+    const numericId = Number(rawId)
+    const store = useCampaignStore.getState()
+
+    if (type === 'player') {
+      const player = playersList.find(p => p.id === numericId)
+      if (player) {
+        store.setActivePlayer(player)
+        onClose()
+      }
+    } else if (type === 'session') {
+      const session = sessionsList.find(s => s.id === numericId)
+      if (session) {
+        store.setActiveSession(session)
+        onClose()
+      }
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -112,6 +141,8 @@ export function PlayerModal({ editTarget, onClose }: PlayerModalProps): JSX.Elem
               content={formData.notes} 
               onChange={(notes) => setFormData(prev => ({ ...prev, notes }))} 
               placeholder="Descreva o background, inventário, etc..."
+              mentionItems={mentionItems}
+              onMentionClick={handleMentionClick}
             />
           </div>
         </form>
