@@ -186,10 +186,7 @@ export function MultiTabEditor({ content, onChange, placeholder, readOnly, menti
             mentionItems={mentionItems}
             onMentionClick={onMentionClick}
             isFullscreen={isFullscreen}
-            onFullscreenToggle={() => {
-              console.log('Toggling fullscreen from child')
-              setIsFullscreen(!isFullscreen)
-            }}
+            onFullscreenToggle={() => setIsFullscreen(!isFullscreen)}
           />
         )}
       </div>
