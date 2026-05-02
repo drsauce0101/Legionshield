@@ -12,7 +12,7 @@ import tippy, { delegate } from 'tippy.js'
 import 'tippy.js/dist/tippy.css'
 import { getMentionSuggestion } from './mentionSuggestion'
 import type { MentionItem } from '../../../types'
-import { Bold, Italic, List, ListOrdered, Strikethrough, Underline as UnderlineIcon, AlignLeft, AlignCenter, AlignRight, Link as LinkIcon, Image as ImageIcon, Heading1, Heading2, Heading3, Maximize2, Minimize2 } from 'lucide-react'
+import { Bold, Italic, List, ListOrdered, Strikethrough, Underline as UnderlineIcon, AlignLeft, AlignCenter, AlignRight, Link as LinkIcon, Image as ImageIcon, Heading1, Heading2, Heading3 } from 'lucide-react'
 
 interface RichTextEditorProps {
   content: string
@@ -21,8 +21,6 @@ interface RichTextEditorProps {
   readOnly?: boolean
   mentionItems?: MentionItem[]
   onMentionClick?: (id: string) => void
-  isFullscreen?: boolean
-  onFullscreenToggle?: () => void
 }
 
 export function RichTextEditor({ 
@@ -32,19 +30,7 @@ export function RichTextEditor({
   readOnly = false, 
   mentionItems = [], 
   onMentionClick,
-  isFullscreen: externalIsFullscreen,
-  onFullscreenToggle: externalOnFullscreenToggle
 }: RichTextEditorProps): JSX.Element {
-  const [internalIsFullscreen, setInternalIsFullscreen] = React.useState(false)
-  
-  const isFullscreen = externalIsFullscreen !== undefined ? externalIsFullscreen : internalIsFullscreen
-  const onToggleFullscreen = () => {
-    if (externalOnFullscreenToggle) {
-      externalOnFullscreenToggle()
-    } else {
-      setInternalIsFullscreen(!internalIsFullscreen)
-    }
-  }
   const containerRef = React.useRef<HTMLDivElement>(null)
 
   const editor = useEditor({
@@ -179,11 +165,8 @@ export function RichTextEditor({
     <div 
       ref={containerRef}
       onClick={handleEditorClick}
-      className={`flex flex-col w-full h-full flex-1 min-h-0 border rounded-none transition-all duration-300 ${
-      isFullscreen && externalIsFullscreen === undefined
-        ? 'fixed inset-0 z-[9999] w-screen h-screen bg-dark-900 border-none' 
-        : `relative ${readOnly ? 'border-transparent' : 'border-white/20 bg-dark-900'}`
-    }`}>
+      className={`flex flex-col w-full h-full flex-1 min-h-0 border rounded-none relative ${readOnly ? 'border-transparent' : 'border-white/20 bg-dark-900'}`}
+    >
       {/* Toolbar */}
       {!readOnly && (
         <div className="flex items-center gap-1 p-2 border-b border-white/10 bg-dark-950 flex-wrap shrink-0 sticky top-0 z-10">
@@ -311,22 +294,11 @@ export function RichTextEditor({
           >
             <ImageIcon className="w-4 h-4" />
           </button>
-
-          <div className="flex-1" />
-
-          <button
-            type="button"
-            onClick={onToggleFullscreen}
-            className="p-1.5 rounded-none text-dark-400 hover:text-white transition-colors ml-auto"
-            title={isFullscreen ? "Sair da Tela Cheia" : "Tela Cheia"}
-          >
-            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-          </button>
         </div>
       )}
 
       {/* Editor Content */}
-      <div className={`p-4 flex-1 overflow-y-auto min-h-[150px] ${isFullscreen ? 'max-w-7xl mx-auto w-full' : ''} ${readOnly ? 'p-0 min-h-0' : ''}`}>
+      <div className={`p-4 flex-1 overflow-y-auto min-h-[150px] ${readOnly ? 'p-0 min-h-0' : ''}`}>
         <div className="prose prose-invert prose-p:leading-relaxed max-w-none w-full">
           <EditorContent editor={editor} />
         </div>

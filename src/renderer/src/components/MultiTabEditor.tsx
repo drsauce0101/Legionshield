@@ -21,7 +21,6 @@ interface MultiTabEditorProps {
 export function MultiTabEditor({ content, onChange, placeholder, readOnly, mentionItems, onMentionClick }: MultiTabEditorProps): JSX.Element {
   const [tabs, setTabs] = useState<TabData[]>([])
   const [activeTabId, setActiveTabId] = useState<string>('')
-  const [isFullscreen, setIsFullscreen] = useState(false)
   const prevContentRef = useRef<string>('')
 
   // Parse content safely
@@ -115,7 +114,7 @@ export function MultiTabEditor({ content, onChange, placeholder, readOnly, menti
   if (tabs.length === 0) return <div />
 
   return (
-    <div className={`flex flex-col w-full h-full flex-1 min-h-0 bg-dark-900 relative ${isFullscreen ? 'fixed inset-0 w-screen h-screen z-[9999] bg-dark-900' : ''}`}>
+    <div className="flex flex-col w-full h-full flex-1 min-h-0 bg-dark-900 relative">
       {/* Tab Bar */}
       <div className="flex items-end bg-dark-950 border-b border-white/10 shrink-0 h-11 overflow-x-auto overflow-y-hidden no-scrollbar px-2 gap-1 relative z-10">
         {tabs.map((tab) => {
@@ -185,8 +184,6 @@ export function MultiTabEditor({ content, onChange, placeholder, readOnly, menti
             readOnly={readOnly}
             mentionItems={mentionItems}
             onMentionClick={onMentionClick}
-            isFullscreen={isFullscreen}
-            onFullscreenToggle={() => setIsFullscreen(!isFullscreen)}
           />
         )}
       </div>
