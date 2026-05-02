@@ -21,10 +21,24 @@ interface RichTextEditorProps {
   readOnly?: boolean
   mentionItems?: MentionItem[]
   onMentionClick?: (id: string) => void
+  isFullscreen?: boolean
+  onFullscreenToggle?: () => void
 }
 
-export function RichTextEditor({ content, onChange, placeholder = 'Escreva aqui...', readOnly = false, mentionItems = [], onMentionClick }: RichTextEditorProps): JSX.Element {
-  const [isFullscreen, setIsFullscreen] = useState(false)
+export function RichTextEditor({ 
+  content, 
+  onChange, 
+  placeholder = 'Escreva aqui...', 
+  readOnly = false, 
+  mentionItems = [], 
+  onMentionClick,
+  isFullscreen: externalIsFullscreen,
+  onFullscreenToggle: externalOnFullscreenToggle
+}: RichTextEditorProps): JSX.Element {
+  const [internalIsFullscreen, setInternalIsFullscreen] = React.useState(false)
+  
+  const isFullscreen = externalIsFullscreen !== undefined ? externalIsFullscreen : internalIsFullscreen
+  const onToggleFullscreen = externalOnFullscreenToggle || (() => setInternalIsFullscreen(!internalIsFullscreen))
   const containerRef = React.useRef<HTMLDivElement>(null)
 
   const editor = useEditor({
@@ -73,13 +87,37 @@ export function RichTextEditor({ content, onChange, placeholder = 'Escreva aqui.
               ? `<div class="w-10 h-10 flex-shrink-0 bg-dark-950 border border-white/20 flex items-center justify-center font-bold text-dark-500 uppercase">${item.label.charAt(0)}</div>`
               : ''
               
+          let attributesHtml = ''
+          if (item.type === 'player' && item.attributes) {
+            try {
+              const attrs = JSON.parse(item.attributes)
+              if (Array.isArray(attrs) && attrs.length > 0) {
+                attributesHtml = `
+                  <div class="mt-3 pt-3 border-t border-white/10 grid grid-cols-2 gap-2">
+                    ${attrs.map(attr => `
+                      <div class="bg-dark-950 border border-white/5 p-1.5 rounded flex flex-col items-center justify-center text-center">
+                        <span class="text-[9px] text-dark-400 font-bold uppercase tracking-widest leading-tight">${attr.name || '-'}</span>
+                        <span class="text-sm font-semibold text-white mt-0.5 leading-none">${attr.value || '0'}${attr.max_value ? ` <span class="text-dark-500 text-xs">/ ${attr.max_value}</span>` : ''}</span>
+                      </div>
+                    `).join('')}
+                  </div>
+                `
+              }
+            } catch {
+              // ignore parse errors
+            }
+          }
+              
           instance.setContent(`
-            <div class="flex items-center gap-3 p-3 bg-dark-900 border border-white/20 shadow-2xl animate-fade-in" style="min-width: 200px;">
-               ${avatarHtml}
-               <div>
-                 <div class="text-white font-bold text-sm mb-0.5">${item.label}</div>
-                 <div class="text-dark-400 text-[10px] font-semibold uppercase tracking-wider">${typeLabels[item.type]}</div>
+            <div class="flex flex-col p-3 bg-dark-900 border border-white/20 shadow-2xl animate-fade-in" style="min-width: 200px; max-width: 320px;">
+               <div class="flex items-center gap-3">
+                 ${avatarHtml}
+                 <div class="flex-1 min-w-0">
+                   <div class="text-white font-bold text-sm mb-0.5 truncate">${item.label}</div>
+                   <div class="text-dark-400 text-[10px] font-semibold uppercase tracking-wider">${typeLabels[item.type]}</div>
+                 </div>
                </div>
+               ${attributesHtml}
             </div>
           `)
         } else {
@@ -136,7 +174,7 @@ export function RichTextEditor({ content, onChange, placeholder = 'Escreva aqui.
       ref={containerRef}
       onClick={handleEditorClick}
       className={`flex flex-col w-full h-full flex-1 min-h-0 border rounded-none transition-all duration-300 ${
-      isFullscreen 
+      isFullscreen && externalIsFullscreen === undefined
         ? 'fixed inset-0 z-50 bg-dark-900 border-none' 
         : `relative ${readOnly ? 'border-transparent' : 'border-white/20 bg-dark-900'}`
     }`}>
@@ -272,7 +310,7 @@ export function RichTextEditor({ content, onChange, placeholder = 'Escreva aqui.
 
           <button
             type="button"
-            onClick={() => setIsFullscreen(!isFullscreen)}
+            onClick={onToggleFullscreen}
             className="p-1.5 rounded-none text-dark-400 hover:text-white transition-colors ml-auto"
             title={isFullscreen ? "Sair da Tela Cheia" : "Tela Cheia"}
           >
@@ -282,7 +320,7 @@ export function RichTextEditor({ content, onChange, placeholder = 'Escreva aqui.
       )}
 
       {/* Editor Content */}
-      <div className={`p-4 flex-1 overflow-y-auto min-h-[150px] ${isFullscreen ? 'max-w-4xl mx-auto w-full' : ''} ${readOnly ? 'p-0 min-h-0' : ''}`}>
+      <div className={`p-4 flex-1 overflow-y-auto min-h-[150px] ${isFullscreen ? 'max-w-7xl mx-auto w-full' : ''} ${readOnly ? 'p-0 min-h-0' : ''}`}>
         <div className="prose prose-invert prose-p:leading-relaxed max-w-none w-full">
           <EditorContent editor={editor} />
         </div>

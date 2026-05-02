@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { X, Image } from 'lucide-react'
 import { useCampaignStore } from '../stores/useCampaignStore'
-import { RichTextEditor } from './RichTextEditor'
-import type { Player, PlayerFormData, MentionItem } from '../../../types'
+import { MultiTabEditor } from './MultiTabEditor'
+import type { Player, PlayerFormData, MentionItem, PlayerAttribute } from '../../../types'
 
 interface PlayerModalProps {
   editTarget: Player | null
@@ -20,6 +20,18 @@ export function PlayerModal({ editTarget, onClose }: PlayerModalProps): JSX.Elem
     campaign_id: editTarget?.campaign_id || activeCampaign?.id || 0
   })
 
+  const [attributes, setAttributes] = useState<PlayerAttribute[]>(() => {
+    try {
+      return editTarget?.attributes ? JSON.parse(editTarget.attributes) : []
+    } catch {
+      return []
+    }
+  })
+
+  useEffect(() => {
+    setFormData(prev => ({ ...prev, attributes: JSON.stringify(attributes) }))
+  }, [attributes])
+
   const handleSelectImage = async () => {
     try {
       const url = await window.api.system.selectImage()
@@ -34,7 +46,7 @@ export function PlayerModal({ editTarget, onClose }: PlayerModalProps): JSX.Elem
   // Generate mentionable items
   const mentionItems: MentionItem[] = React.useMemo(() => {
     return [
-      ...playersList.map(p => ({ id: `player_${p.id}`, label: p.name, type: 'player' as const, avatar_url: p.avatar_url })),
+      ...playersList.map(p => ({ id: `player_${p.id}`, label: p.name, type: 'player' as const, avatar_url: p.avatar_url, attributes: p.attributes })),
       ...sessionsList.map(s => ({ id: `session_${s.id}`, label: s.title, type: 'session' as const })),
       ...(activeCampaign ? [{ id: `campaign_${activeCampaign.id}`, label: activeCampaign.name, type: 'campaign' as const }] : [])
     ]
@@ -78,7 +90,7 @@ export function PlayerModal({ editTarget, onClose }: PlayerModalProps): JSX.Elem
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-dark-950/80 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-2xl bg-dark-900 border border-white/20 shadow-2xl animate-slide-up flex flex-col max-h-[90vh]">
+      <div className="w-full max-w-5xl bg-dark-900 border border-white/20 shadow-2xl animate-slide-up flex flex-col h-full max-h-[90vh]">
         
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-white/10 shrink-0">
@@ -91,8 +103,8 @@ export function PlayerModal({ editTarget, onClose }: PlayerModalProps): JSX.Elem
         </div>
 
         {/* Body */}
-        <form id="player-form" onSubmit={handleSubmit} className="p-6 flex-1 overflow-y-auto space-y-6">
-          <div className="grid grid-cols-2 gap-6">
+        <form id="player-form" onSubmit={handleSubmit} className="p-6 flex-1 overflow-y-auto space-y-6 flex flex-col">
+          <div className="grid grid-cols-2 gap-6 shrink-0">
             <div className="space-y-2">
               <label className="block text-xs font-semibold tracking-wider text-dark-300 uppercase">
                 Nome do Jogador/Personagem *
@@ -122,7 +134,7 @@ export function PlayerModal({ editTarget, onClose }: PlayerModalProps): JSX.Elem
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2 shrink-0">
             <label className="block text-xs font-semibold tracking-wider text-dark-300 uppercase">
               Foto de Perfil
             </label>
@@ -154,11 +166,81 @@ export function PlayerModal({ editTarget, onClose }: PlayerModalProps): JSX.Elem
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="block text-xs font-semibold tracking-wider text-dark-300 uppercase">
+          <div className="space-y-3 shrink-0">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-semibold tracking-wider text-dark-300 uppercase">
+                Atributos / Status
+              </label>
+              <button 
+                type="button" 
+                onClick={() => setAttributes(prev => [...prev, { name: '', value: '' }])}
+                className="text-xs text-brand-400 hover:text-brand-300 transition-colors flex items-center gap-1 font-semibold"
+              >
+                + Adicionar Atributo
+              </button>
+            </div>
+            
+            {attributes.length > 0 && (
+              <div className="space-y-2">
+                {attributes.map((attr, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={attr.name}
+                      onChange={(e) => {
+                        const newAttrs = [...attributes]
+                        newAttrs[index].name = e.target.value
+                        setAttributes(newAttrs)
+                      }}
+                      className="input-field w-1/3 text-sm py-1.5"
+                      placeholder="Nome (ex: HP)"
+                    />
+                    <input
+                      type="text"
+                      value={attr.value}
+                      onChange={(e) => {
+                        const newAttrs = [...attributes]
+                        newAttrs[index].value = e.target.value
+                        setAttributes(newAttrs)
+                      }}
+                      className="input-field w-1/3 text-sm py-1.5"
+                      placeholder="Valor (ex: 10)"
+                    />
+                    <span className="text-dark-400">/</span>
+                    <input
+                      type="text"
+                      value={attr.max_value || ''}
+                      onChange={(e) => {
+                        const newAttrs = [...attributes]
+                        newAttrs[index].max_value = e.target.value
+                        setAttributes(newAttrs)
+                      }}
+                      className="input-field w-1/4 text-sm py-1.5"
+                      placeholder="Max (Opcional)"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newAttrs = [...attributes]
+                        newAttrs.splice(index, 1)
+                        setAttributes(newAttrs)
+                      }}
+                      className="p-1.5 text-red-400 hover:bg-red-400/10 rounded transition-colors ml-auto flex-shrink-0"
+                      title="Remover atributo"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2 flex-1 flex flex-col min-h-[300px]">
+            <label className="block text-xs font-semibold tracking-wider text-dark-300 uppercase shrink-0">
               Anotações do Personagem
             </label>
-            <RichTextEditor 
+            <MultiTabEditor 
               content={formData.notes} 
               onChange={(notes) => setFormData(prev => ({ ...prev, notes }))} 
               placeholder="Descreva o background, inventário, etc..."

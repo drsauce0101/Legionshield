@@ -22,6 +22,13 @@ export interface CampaignFormData {
   system_id: number
 }
 
+export interface PlayerAttribute {
+  name: string
+  value: string
+  max_value?: string // Optional, for "10 / 10" displays
+  color?: string // Optional, for custom colors
+}
+
 export interface Player {
   id: number
   campaign_id: number
@@ -29,6 +36,7 @@ export interface Player {
   class_archetype: string
   notes: string // HTML from Rich Text
   avatar_url?: string
+  attributes?: string // JSON string of PlayerAttribute[]
   created_at?: string
 }
 
@@ -37,6 +45,7 @@ export interface PlayerFormData {
   class_archetype: string
   notes: string
   avatar_url?: string
+  attributes?: string // JSON string of PlayerAttribute[]
   campaign_id: number
 }
 
@@ -66,6 +75,7 @@ export type MentionItem = {
   label: string
   type: 'player' | 'session' | 'campaign'
   avatar_url?: string
+  attributes?: string // JSON string of PlayerAttribute[]
 }
 
 // ─── Electron API (exposed via contextBridge) ─────────────────────────────────

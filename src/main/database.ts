@@ -74,6 +74,13 @@ function runMigrations(): void {
   } catch (err) {
     // Column might already exist, ignore error
   }
+  
+  // Check if attributes exists in players table
+  try {
+    db.run('ALTER TABLE players ADD COLUMN attributes TEXT DEFAULT "[]"')
+  } catch (err) {
+    // Column might already exist, ignore error
+  }
 }
 
 function seedDefaultData(): void {
@@ -155,8 +162,8 @@ export function getPlayersByCampaign(campaignId: number): any[] {
 
 export function createPlayer(data: any): any {
   db.run(
-    `INSERT INTO players (campaign_id, name, class_archetype, notes, avatar_url) VALUES (?, ?, ?, ?, ?)`,
-    [data.campaign_id, data.name, data.class_archetype, data.notes, data.avatar_url || '']
+    `INSERT INTO players (campaign_id, name, class_archetype, notes, avatar_url, attributes) VALUES (?, ?, ?, ?, ?, ?)`,
+    [data.campaign_id, data.name, data.class_archetype, data.notes, data.avatar_url || '', data.attributes || '[]']
   )
   const lastId = (db.get('SELECT last_insert_rowid() as id') as { id: number }).id
   return db.get(`SELECT * FROM players WHERE id = ?`, [lastId])

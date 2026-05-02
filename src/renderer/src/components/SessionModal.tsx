@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
 import { useCampaignStore } from '../stores/useCampaignStore'
-import { RichTextEditor } from './RichTextEditor'
+import { MultiTabEditor } from './MultiTabEditor'
 import type { Session, SessionFormData, MentionItem } from '../../../types'
 
 interface SessionModalProps {
@@ -31,7 +31,7 @@ export function SessionModal({ editTarget, onClose }: SessionModalProps): JSX.El
   // Generate mentionable items
   const mentionItems: MentionItem[] = React.useMemo(() => {
     return [
-      ...playersList.map(p => ({ id: `player_${p.id}`, label: p.name, type: 'player' as const, avatar_url: p.avatar_url })),
+      ...playersList.map(p => ({ id: `player_${p.id}`, label: p.name, type: 'player' as const, avatar_url: p.avatar_url, attributes: p.attributes })),
       ...sessionsList.map(s => ({ id: `session_${s.id}`, label: s.title, type: 'session' as const })),
       ...(activeCampaign ? [{ id: `campaign_${activeCampaign.id}`, label: activeCampaign.name, type: 'campaign' as const }] : [])
     ]
@@ -81,7 +81,7 @@ export function SessionModal({ editTarget, onClose }: SessionModalProps): JSX.El
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-dark-950/80 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-3xl bg-dark-900 border border-white/20 shadow-2xl animate-slide-up flex flex-col max-h-[90vh]">
+      <div className="w-full max-w-6xl bg-dark-900 border border-white/20 shadow-2xl animate-slide-up flex flex-col h-full max-h-[90vh]">
         
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-white/10 shrink-0">
@@ -94,8 +94,8 @@ export function SessionModal({ editTarget, onClose }: SessionModalProps): JSX.El
         </div>
 
         {/* Body */}
-        <form id="session-form" onSubmit={handleSubmit} className="p-6 flex-1 overflow-y-auto space-y-6">
-          <div className="grid grid-cols-2 gap-6">
+        <form id="session-form" onSubmit={handleSubmit} className="p-6 flex-1 overflow-y-auto space-y-6 flex flex-col">
+          <div className="grid grid-cols-2 gap-6 shrink-0">
             <div className="space-y-2">
               <label className="block text-xs font-semibold tracking-wider text-dark-300 uppercase">
                 Título da Sessão *
@@ -125,7 +125,7 @@ export function SessionModal({ editTarget, onClose }: SessionModalProps): JSX.El
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2 shrink-0">
             <label className="block text-xs font-semibold tracking-wider text-dark-300 uppercase">
               Jogadores Presentes
             </label>
@@ -151,11 +151,11 @@ export function SessionModal({ editTarget, onClose }: SessionModalProps): JSX.El
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="block text-xs font-semibold tracking-wider text-dark-300 uppercase">
+          <div className="space-y-2 flex-1 flex flex-col min-h-[300px]">
+            <label className="block text-xs font-semibold tracking-wider text-dark-300 uppercase shrink-0">
               Resumo / Notas da Sessão
             </label>
-            <RichTextEditor 
+            <MultiTabEditor 
               content={formData.notes} 
               onChange={(notes) => setFormData(prev => ({ ...prev, notes }))} 
               placeholder="O que aconteceu nesta sessão?"

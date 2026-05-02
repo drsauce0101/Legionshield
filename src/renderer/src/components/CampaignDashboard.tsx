@@ -4,7 +4,7 @@ import { useCampaignStore } from '../stores/useCampaignStore'
 import { DiceRoller } from './DiceRoller'
 import { PlayerModal } from './PlayerModal'
 import { SessionModal } from './SessionModal'
-import { RichTextEditor } from './RichTextEditor'
+import { MultiTabEditor } from './MultiTabEditor'
 import type { Player, Session, MentionItem } from '../../../types'
 
 interface CampaignDashboardProps {
@@ -41,7 +41,7 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
   // Generate mentionable items
   const mentionItems: MentionItem[] = React.useMemo(() => {
     return [
-      ...playersList.map(p => ({ id: `player_${p.id}`, label: p.name, type: 'player' as const, avatar_url: p.avatar_url })),
+      ...playersList.map(p => ({ id: `player_${p.id}`, label: p.name, type: 'player' as const, avatar_url: p.avatar_url, attributes: p.attributes })),
       ...sessionsList.map(s => ({ id: `session_${s.id}`, label: s.title, type: 'session' as const })),
       ...(activeCampaign ? [{ id: `campaign_${activeCampaign.id}`, label: activeCampaign.name, type: 'campaign' as const }] : [])
     ]
@@ -299,8 +299,8 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
               )}
             </header>
             <div className="flex-1 overflow-y-auto p-8">
-              <div className="max-w-4xl mx-auto">
-                <RichTextEditor 
+              <div className="max-w-7xl mx-auto">
+                <MultiTabEditor 
                   content={activeSession.notes} 
                   onChange={handleSessionNotesChange} 
                   placeholder="A aventura continua..."
@@ -328,8 +328,29 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
               </div>
             </header>
             <div className="flex-1 overflow-y-auto p-8">
-              <div className="max-w-4xl mx-auto">
-                <RichTextEditor 
+              <div className="max-w-7xl mx-auto">
+                {(() => {
+                  try {
+                    const attrs = activePlayer.attributes ? JSON.parse(activePlayer.attributes) : []
+                    if (Array.isArray(attrs) && attrs.length > 0) {
+                      return (
+                        <div className="mb-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+                          {attrs.map((attr, idx) => (
+                            <div key={idx} className="bg-dark-950 border border-white/10 p-4 flex flex-col items-center justify-center rounded">
+                              <span className="text-xs text-dark-400 font-bold uppercase tracking-widest mb-1">{attr.name}</span>
+                              <span className="text-2xl font-display font-semibold text-white">
+                                {attr.value}
+                                {attr.max_value && <span className="text-dark-500 text-lg ml-1">/ {attr.max_value}</span>}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )
+                    }
+                  } catch {}
+                  return null
+                })()}
+                <MultiTabEditor 
                   content={activePlayer.notes} 
                   onChange={(notes) => updatePlayer(activePlayer.id, { notes })} 
                   placeholder="Anotações do jogador..."
@@ -394,17 +415,44 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
               </div>
             </div>
             
+            {/* Attributes Preview */}
+            {(() => {
+              try {
+                const attrs = previewPlayer.attributes ? JSON.parse(previewPlayer.attributes) : []
+                if (Array.isArray(attrs) && attrs.length > 0) {
+                  return (
+                    <div className="mt-8 border-t border-white/10 pt-6">
+                      <h4 className="text-xs font-semibold text-dark-400 uppercase tracking-wider mb-4">Atributos / Status</h4>
+                      <div className="grid grid-cols-2 gap-3">
+                        {attrs.map((attr, idx) => (
+                          <div key={idx} className="bg-dark-950 border border-white/10 p-3 flex flex-col items-center justify-center rounded">
+                            <span className="text-[10px] text-dark-400 font-bold uppercase tracking-widest mb-0.5">{attr.name}</span>
+                            <span className="text-lg font-display font-semibold text-white">
+                              {attr.value}
+                              {attr.max_value && <span className="text-dark-500 text-sm ml-1">/ {attr.max_value}</span>}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                }
+              } catch {}
+              return null
+            })()}
+
             {/* Notes Preview */}
             <div className="mt-8 border-t border-white/10 pt-6">
               <h4 className="text-xs font-semibold text-dark-400 uppercase tracking-wider mb-4">Anotações do Personagem</h4>
-              <div className="bg-dark-950 border border-white/10 p-4 max-h-60 overflow-y-auto w-full">
-                {previewPlayer.notes ? (
-                  <div 
-                    className="prose prose-invert prose-p:leading-relaxed prose-sm max-w-none"
-                    dangerouslySetInnerHTML={{ __html: previewPlayer.notes }} 
+              <div className="bg-dark-950 border border-white/10 max-h-60 overflow-y-auto w-full flex flex-col">
+                {previewPlayer.notes && previewPlayer.notes !== '[]' ? (
+                  <MultiTabEditor 
+                    content={previewPlayer.notes}
+                    readOnly={true}
+                    mentionItems={mentionItems}
                   />
                 ) : (
-                  <p className="text-dark-500 text-sm italic">Nenhuma anotação registrada.</p>
+                  <div className="p-4"><p className="text-dark-500 text-sm italic">Nenhuma anotação registrada.</p></div>
                 )}
               </div>
             </div>
