@@ -124,7 +124,7 @@ export function MultiTabEditor({ content, onChange, placeholder, readOnly, menti
             <div
               key={tab.id}
               onClick={() => setActiveTabId(tab.id)}
-              className={`group flex items-center gap-2 px-4 py-2 border border-b-0 rounded-t-lg cursor-pointer transition-colors whitespace-nowrap min-w-[120px] max-w-[200px] ${
+              className={`group flex items-center gap-2 px-4 py-2 border border-b-0 rounded-t-sm cursor-pointer transition-colors whitespace-nowrap min-w-[120px] max-w-[200px] ${
                 isActive 
                   ? 'bg-dark-900 border-white/20 text-white z-20 relative' 
                   : 'bg-dark-950 border-transparent text-dark-400 hover:bg-white/5 hover:text-white z-10'
@@ -186,7 +186,10 @@ export function MultiTabEditor({ content, onChange, placeholder, readOnly, menti
             mentionItems={mentionItems}
             onMentionClick={onMentionClick}
             isFullscreen={isFullscreen}
-            onFullscreenToggle={() => setIsFullscreen(!isFullscreen)}
+            onFullscreenToggle={() => {
+              console.log('Toggling fullscreen from child')
+              setIsFullscreen(!isFullscreen)
+            }}
           />
         )}
       </div>

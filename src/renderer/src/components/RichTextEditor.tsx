@@ -174,8 +174,8 @@ export function RichTextEditor({
       ref={containerRef}
       onClick={handleEditorClick}
       className={`flex flex-col w-full h-full flex-1 min-h-0 border rounded-none transition-all duration-300 ${
-      isFullscreen && externalIsFullscreen === undefined
-        ? 'fixed inset-0 z-50 bg-dark-900 border-none' 
+      isFullscreen
+        ? (externalIsFullscreen === undefined ? 'fixed inset-0 z-50 bg-dark-900 border-none' : 'relative z-0') 
         : `relative ${readOnly ? 'border-transparent' : 'border-white/20 bg-dark-900'}`
     }`}>
       {/* Toolbar */}
