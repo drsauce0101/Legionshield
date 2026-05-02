@@ -38,7 +38,13 @@ export function RichTextEditor({
   const [internalIsFullscreen, setInternalIsFullscreen] = React.useState(false)
   
   const isFullscreen = externalIsFullscreen !== undefined ? externalIsFullscreen : internalIsFullscreen
-  const onToggleFullscreen = externalOnFullscreenToggle || (() => setInternalIsFullscreen(!internalIsFullscreen))
+  const onToggleFullscreen = () => {
+    if (externalOnFullscreenToggle) {
+      externalOnFullscreenToggle()
+    } else {
+      setInternalIsFullscreen(!internalIsFullscreen)
+    }
+  }
   const containerRef = React.useRef<HTMLDivElement>(null)
 
   const editor = useEditor({
@@ -175,7 +181,7 @@ export function RichTextEditor({
       onClick={handleEditorClick}
       className={`flex flex-col w-full h-full flex-1 min-h-0 border rounded-none transition-all duration-300 ${
       isFullscreen
-        ? (externalIsFullscreen === undefined ? 'fixed inset-0 z-50 bg-dark-900 border-none' : 'relative z-0') 
+        ? (externalIsFullscreen === undefined ? 'fixed inset-0 z-50 w-screen h-screen bg-dark-900 border-none' : 'relative z-0 h-full w-full') 
         : `relative ${readOnly ? 'border-transparent' : 'border-white/20 bg-dark-900'}`
     }`}>
       {/* Toolbar */}
