@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Plus, Search, Shield } from 'lucide-react'
+import { Plus, Search, Shield, Settings } from 'lucide-react'
 import { TitleBar } from './components/TitleBar'
 import { CampaignGrid } from './components/CampaignGrid'
 import { CampaignDashboard } from './components/CampaignDashboard'
 import { NewCampaignModal } from './components/NewCampaignModal'
 import { LoadingScreen } from './components/LoadingScreen'
+import { SettingsModal } from './components/SettingsModal'
 import { useCampaignStore } from './stores/useCampaignStore'
 import type { Campaign } from '../../types'
 
@@ -14,6 +15,7 @@ export default function App(): JSX.Element {
   const [editTarget, setEditTarget] = useState<Campaign | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [isAppLoading, setIsAppLoading] = useState(true)
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   useEffect(() => {
     Promise.all([
@@ -100,6 +102,14 @@ export default function App(): JSX.Element {
                   <Plus className="w-4 h-4" />
                   Nova Campanha
                 </button>
+                <button
+                  id="btn-settings"
+                  onClick={() => setSettingsOpen(true)}
+                  title="Configurações"
+                  className="flex items-center justify-center w-9 h-9 border border-white/20 text-dark-400 hover:text-white hover:bg-white/10 hover:border-white/40 transition-colors"
+                >
+                  <Settings className="w-4 h-4" />
+                </button>
               </div>
             </div>
           </div>
@@ -121,6 +131,11 @@ export default function App(): JSX.Element {
           editTarget={editTarget}
           onClose={handleCloseModal}
         />
+      )}
+
+      {/* Settings Modal */}
+      {settingsOpen && (
+        <SettingsModal onClose={() => setSettingsOpen(false)} />
       )}
     </div>
   )

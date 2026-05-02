@@ -28,6 +28,7 @@ interface CampaignStore {
   updatePlayer: (id: number, data: Partial<PlayerFormData>) => Promise<void>
   deletePlayer: (id: number) => Promise<void>
   setActivePlayer: (player: Player | null) => void
+  reorderPlayers: (fromIndex: number, toIndex: number) => void
 
   // Sessions
   fetchSessions: (campaignId: number) => Promise<void>
@@ -35,6 +36,7 @@ interface CampaignStore {
   updateSession: (id: number, data: Partial<SessionFormData>, playerIds?: number[]) => Promise<void>
   deleteSession: (id: number) => Promise<void>
   setActiveSession: (session: Session | null) => void
+  reorderSessions: (fromIndex: number, toIndex: number) => void
 }
 
 export const useCampaignStore = create<CampaignStore>((set, get) => ({
@@ -203,5 +205,19 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
   },
 
   setActiveSession: (session) => set({ activeSession: session, activePlayer: null }),
-  setActivePlayer: (player) => set({ activePlayer: player, activeSession: null })
+  setActivePlayer: (player) => set({ activePlayer: player, activeSession: null }),
+
+  reorderPlayers: (fromIndex, toIndex) => set((state) => {
+    const list = [...state.playersList]
+    const [moved] = list.splice(fromIndex, 1)
+    list.splice(toIndex, 0, moved)
+    return { playersList: list }
+  }),
+
+  reorderSessions: (fromIndex, toIndex) => set((state) => {
+    const list = [...state.sessionsList]
+    const [moved] = list.splice(fromIndex, 1)
+    list.splice(toIndex, 0, moved)
+    return { sessionsList: list }
+  }),
 }))

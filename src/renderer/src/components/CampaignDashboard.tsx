@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { ArrowLeft, Users, BookOpen, Plus, Settings, X } from 'lucide-react'
 import { useCampaignStore } from '../stores/useCampaignStore'
-import { DiceRoller } from './DiceRoller'
 import { PlayerModal } from './PlayerModal'
 import { SessionModal } from './SessionModal'
 import { MultiTabEditor } from './MultiTabEditor'
@@ -23,7 +22,9 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
     updateSession,
     activePlayer,
     setActivePlayer,
-    updatePlayer
+    updatePlayer,
+    reorderPlayers,
+    reorderSessions
   } = useCampaignStore()
 
   const [activeTab, setActiveTab] = useState<'sessions' | 'players'>('sessions')
@@ -37,6 +38,12 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
 
   const [presentPlayerIds, setPresentPlayerIds] = useState<number[]>([])
   const [previewPlayer, setPreviewPlayer] = useState<Player | null>(null)
+
+  // Drag-and-drop state
+  const [draggingSessionIdx, setDraggingSessionIdx] = useState<number | null>(null)
+  const [dragOverSessionIdx, setDragOverSessionIdx] = useState<number | null>(null)
+  const [draggingPlayerIdx, setDraggingPlayerIdx] = useState<number | null>(null)
+  const [dragOverPlayerIdx, setDragOverPlayerIdx] = useState<number | null>(null)
 
   // Generate mentionable items
   const mentionItems: MentionItem[] = React.useMemo(() => {
@@ -114,11 +121,6 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
 
   return (
     <div className="flex flex-1 min-h-0 relative">
-      {/* ── Dice Layer (Overlay) ────────────────────────────────────────── */}
-      <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">
-        <DiceRoller />
-      </div>
-
       {/* ── Sidebar (Players / Sessions) ─────────────────────────────────── */}
       <aside className="w-80 border-r border-white/20 bg-dark-950 flex flex-col z-20 shrink-0 relative">
         <div className="p-4 border-b border-white/10 flex items-center gap-3">
@@ -156,7 +158,7 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
         </div>
 
         {/* List Content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+        <div className="flex-1 overflow-y-auto p-4 space-y-1">
           {activeTab === 'sessions' && (
             <>
               <button onClick={handleOpenSessionNew} className="w-full btn-secondary py-2 justify-center mb-4 text-xs">
@@ -166,36 +168,74 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
               {sessionsList.length === 0 ? (
                 <div className="text-center p-4 text-dark-500 text-sm">Nenhuma sessão criada.</div>
               ) : (
-                sessionsList.map(session => (
-                  <div 
-                    key={session.id}
-                    onClick={() => setActiveSession(session)}
-                    className={`p-3 border cursor-pointer transition-colors ${
-                      activeSession?.id === session.id 
-                        ? 'border-white bg-white/5' 
-                        : 'border-transparent hover:border-white/20 bg-dark-900'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-semibold text-white truncate">{session.title}</h4>
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); handleOpenSessionEdit(session) }}
-                        className="text-dark-400 hover:text-white"
-                      >
-                        <Settings className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                    {session.tags && (
-                      <div className="flex gap-1 mt-2 overflow-x-auto no-scrollbar">
-                        {session.tags.split(',').map((t, i) => (
-                          <span key={i} className="text-[10px] px-1.5 py-0.5 bg-dark-950 border border-white/10 text-dark-300 whitespace-nowrap">
-                            {t.trim()}
-                          </span>
-                        ))}
+                <div className="space-y-1">
+                  {sessionsList.map((session, idx) => (
+                    <div
+                      key={session.id}
+                      draggable
+                      onDragStart={(e) => {
+                        setDraggingSessionIdx(idx)
+                        e.dataTransfer.effectAllowed = 'move'
+                      }}
+                      onDragEnd={() => {
+                        if (draggingSessionIdx !== null && dragOverSessionIdx !== null && draggingSessionIdx !== dragOverSessionIdx) {
+                          reorderSessions(draggingSessionIdx, dragOverSessionIdx)
+                        }
+                        setDraggingSessionIdx(null)
+                        setDragOverSessionIdx(null)
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault()
+                        e.dataTransfer.dropEffect = 'move'
+                        setDragOverSessionIdx(idx)
+                      }}
+                      onDragLeave={() => setDragOverSessionIdx(null)}
+                      onClick={() => setActiveSession(session)}
+                      style={{
+                        opacity: draggingSessionIdx === idx ? 0.35 : 1,
+                        transition: 'opacity 0.15s ease',
+                      }}
+                      className={`relative p-3 border cursor-pointer transition-colors select-none ${
+                        activeSession?.id === session.id
+                          ? 'border-white bg-white/5'
+                          : 'border-transparent hover:border-white/20 bg-dark-900'
+                      } ${
+                        dragOverSessionIdx === idx && draggingSessionIdx !== idx
+                          ? 'border-t-2 border-t-white/60'
+                          : ''
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        {/* Drag handle */}
+                        <span
+                          className="text-dark-600 hover:text-dark-300 cursor-grab active:cursor-grabbing shrink-0 transition-colors text-base leading-none select-none"
+                          title="Arraste para reordenar"
+                          onMouseDown={(e) => e.stopPropagation()}
+                        >
+                          ⠿
+                        </span>
+                        <div className="flex-1 min-w-0 flex items-center justify-between">
+                          <h4 className="text-sm font-semibold text-white truncate">{session.title}</h4>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleOpenSessionEdit(session) }}
+                            className="text-dark-400 hover:text-white ml-1 shrink-0"
+                          >
+                            <Settings className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                ))
+                      {session.tags && (
+                        <div className="flex gap-1 mt-2 overflow-x-auto no-scrollbar pl-5">
+                          {session.tags.split(',').map((t, i) => (
+                            <span key={i} className="text-[10px] px-1.5 py-0.5 bg-dark-950 border border-white/10 text-dark-300 whitespace-nowrap">
+                              {t.trim()}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               )}
             </>
           )}
@@ -209,41 +249,77 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
               {playersList.length === 0 ? (
                 <div className="text-center p-4 text-dark-500 text-sm">Nenhum jogador criado.</div>
               ) : (
-                playersList.map(player => (
-                  <div 
-                    key={player.id}
-                    onClick={() => setActivePlayer(player)}
-                    className={`p-3 border cursor-pointer transition-colors flex items-center gap-3 ${
-                      activePlayer?.id === player.id 
-                        ? 'border-white bg-white/5' 
-                        : 'border-transparent hover:border-white/20 bg-dark-900'
-                    }`}
-                  >
-                    {/* Avatar */}
-                    <div className="w-10 h-10 flex-shrink-0 bg-dark-950 border border-white/20 flex items-center justify-center overflow-hidden">
-                      {player.avatar_url ? (
-                        <img src={player.avatar_url} alt={player.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="text-dark-500 font-display font-bold text-lg leading-none uppercase">
-                          {player.name.charAt(0)}
-                        </span>
-                      )}
-                    </div>
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-sm font-semibold text-white truncate">{player.name}</h4>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); handleOpenPlayerEdit(player) }}
-                          className="text-dark-400 hover:text-white"
-                        >
-                          <Settings className="w-3.5 h-3.5" />
-                        </button>
+                <div className="space-y-1">
+                  {playersList.map((player, idx) => (
+                    <div
+                      key={player.id}
+                      draggable
+                      onDragStart={(e) => {
+                        setDraggingPlayerIdx(idx)
+                        e.dataTransfer.effectAllowed = 'move'
+                      }}
+                      onDragEnd={() => {
+                        if (draggingPlayerIdx !== null && dragOverPlayerIdx !== null && draggingPlayerIdx !== dragOverPlayerIdx) {
+                          reorderPlayers(draggingPlayerIdx, dragOverPlayerIdx)
+                        }
+                        setDraggingPlayerIdx(null)
+                        setDragOverPlayerIdx(null)
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault()
+                        e.dataTransfer.dropEffect = 'move'
+                        setDragOverPlayerIdx(idx)
+                      }}
+                      onDragLeave={() => setDragOverPlayerIdx(null)}
+                      onClick={() => setActivePlayer(player)}
+                      style={{
+                        opacity: draggingPlayerIdx === idx ? 0.35 : 1,
+                        transition: 'opacity 0.15s ease',
+                      }}
+                      className={`relative p-3 border cursor-pointer transition-colors flex items-center gap-2 select-none ${
+                        activePlayer?.id === player.id
+                          ? 'border-white bg-white/5'
+                          : 'border-transparent hover:border-white/20 bg-dark-900'
+                      } ${
+                        dragOverPlayerIdx === idx && draggingPlayerIdx !== idx
+                          ? 'border-t-2 border-t-white/60'
+                          : ''
+                      }`}
+                    >
+                      {/* Drag handle */}
+                      <span
+                        className="text-dark-600 hover:text-dark-300 cursor-grab active:cursor-grabbing shrink-0 transition-colors text-base leading-none select-none"
+                        title="Arraste para reordenar"
+                        onMouseDown={(e) => e.stopPropagation()}
+                      >
+                        ⠿
+                      </span>
+                      {/* Avatar */}
+                      <div className="w-9 h-9 flex-shrink-0 bg-dark-950 border border-white/20 flex items-center justify-center overflow-hidden">
+                        {player.avatar_url ? (
+                          <img src={player.avatar_url} alt={player.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-dark-500 font-display font-bold text-base leading-none uppercase">
+                            {player.name.charAt(0)}
+                          </span>
+                        )}
                       </div>
-                      <p className="text-xs text-dark-400 mt-1 truncate">{player.class_archetype || 'Sem classe'}</p>
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-sm font-semibold text-white truncate">{player.name}</h4>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleOpenPlayerEdit(player) }}
+                            className="text-dark-400 hover:text-white"
+                          >
+                            <Settings className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        <p className="text-xs text-dark-400 mt-0.5 truncate">{player.class_archetype || 'Sem classe'}</p>
+                      </div>
                     </div>
-                  </div>
-                ))
+                  ))}
+                </div>
               )}
             </>
           )}
