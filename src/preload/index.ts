@@ -25,6 +25,12 @@ const api = {
     delete: (id: number) => ipcRenderer.invoke('sessions:delete', id),
     getPresentPlayers: (sessionId: number) => ipcRenderer.invoke('sessions:getPresentPlayers', sessionId)
   },
+  tables: {
+    getByCampaign: (campaignId: number) => ipcRenderer.invoke('tables:getByCampaign', campaignId),
+    create: (data: any) => ipcRenderer.invoke('tables:create', data),
+    update: (id: number, data: any) => ipcRenderer.invoke('tables:update', id, data),
+    delete: (id: number) => ipcRenderer.invoke('tables:delete', id)
+  },
   system: {
     selectImage: () => ipcRenderer.invoke('system:selectImage')
   },

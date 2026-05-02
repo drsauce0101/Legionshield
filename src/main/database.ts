@@ -64,6 +64,16 @@ function createTables(): void {
       FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE,
       FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS tables (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      campaign_id INTEGER NOT NULL,
+      name        TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      content     TEXT DEFAULT '[]', -- JSON TableRow[]
+      created_at  TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
+    );
   `)
 }
 
@@ -231,4 +241,34 @@ export function deleteSession(id: number): void {
 export function getPresentPlayers(sessionId: number): number[] {
   const rows = db.all('SELECT player_id FROM session_players WHERE session_id = ?', [sessionId]) as { player_id: number }[]
   return rows.map((r) => r.player_id)
+}
+
+// ─── Table Queries ────────────────────────────────────────────────────────────
+
+export function getTablesByCampaign(campaignId: number): any[] {
+  return db.all(`SELECT * FROM tables WHERE campaign_id = ? ORDER BY id DESC`, [campaignId])
+}
+
+export function createTable(data: any): any {
+  db.run(
+    `INSERT INTO tables (campaign_id, name, description, content) VALUES (?, ?, ?, ?)`,
+    [data.campaign_id, data.name, data.description, data.content || '[]']
+  )
+  const lastId = (db.get('SELECT last_insert_rowid() as id') as { id: number }).id
+  return db.get(`SELECT * FROM tables WHERE id = ?`, [lastId])
+}
+
+export function updateTable(id: number, data: any): any {
+  const entries = Object.entries(data).filter(([, v]) => v !== undefined)
+  if (entries.length === 0) return db.get(`SELECT * FROM tables WHERE id = ?`, [id])
+
+  const sets = entries.map(([k]) => `${k} = ?`).join(', ')
+  const values = entries.map(([, v]) => v)
+
+  db.run(`UPDATE tables SET ${sets} WHERE id = ?`, [...values, id] as any[])
+  return db.get(`SELECT * FROM tables WHERE id = ?`, [id])
+}
+
+export function deleteTable(id: number): void {
+  db.run('DELETE FROM tables WHERE id = ?', [id])
 }

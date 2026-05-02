@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react'
-import { ArrowLeft, Users, BookOpen, Plus, Settings, X } from 'lucide-react'
+import { ArrowLeft, Users, BookOpen, Plus, Settings, X, Hash, Dices } from 'lucide-react'
+import { audioService } from '../utils/audio'
 import { useCampaignStore } from '../stores/useCampaignStore'
 import { PlayerModal } from './PlayerModal'
 import { SessionModal } from './SessionModal'
+import { TableModal } from './TableModal'
 import { MultiTabEditor } from './MultiTabEditor'
 import type { Player, Session, MentionItem } from '../../../types'
 
@@ -24,10 +26,16 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
     setActivePlayer,
     updatePlayer,
     reorderPlayers,
-    reorderSessions
+    reorderSessions,
+    tablesList,
+    fetchTables,
+    reorderTables,
+    deleteTable,
+    activeTable,
+    setActiveTable
   } = useCampaignStore()
 
-  const [activeTab, setActiveTab] = useState<'sessions' | 'players'>('sessions')
+  const [activeTab, setActiveTab] = useState<'sessions' | 'players' | 'tables'>('sessions')
   
   // Modals state
   const [playerModalOpen, setPlayerModalOpen] = useState(false)
@@ -35,6 +43,9 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
   
   const [sessionModalOpen, setSessionModalOpen] = useState(false)
   const [editSessionTarget, setEditSessionTarget] = useState<Session | null>(null)
+
+  const [tableModalOpen, setTableModalOpen] = useState(false)
+  const [editTableTarget, setEditTableTarget] = useState<any | null>(null)
 
   const [presentPlayerIds, setPresentPlayerIds] = useState<number[]>([])
   const [previewPlayer, setPreviewPlayer] = useState<Player | null>(null)
@@ -77,8 +88,9 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
     if (activeCampaign) {
       fetchPlayers(activeCampaign.id)
       fetchSessions(activeCampaign.id)
+      fetchTables(activeCampaign.id)
     }
-  }, [activeCampaign, fetchPlayers, fetchSessions])
+  }, [activeCampaign, fetchPlayers, fetchSessions, fetchTables])
 
   useEffect(() => {
     if (activeSession && !sessionModalOpen) {
@@ -110,6 +122,16 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
     setSessionModalOpen(true)
   }
 
+  const handleOpenTableNew = () => {
+    setEditTableTarget(null)
+    setTableModalOpen(true)
+  }
+
+  const handleOpenTableEdit = (t: any) => {
+    setEditTableTarget(t)
+    setTableModalOpen(true)
+  }
+
   // Handle auto-save for session notes
   const handleSessionNotesChange = (notes: string) => {
     if (activeSession) {
@@ -124,7 +146,14 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
       {/* ── Sidebar (Players / Sessions) ─────────────────────────────────── */}
       <aside className="w-80 border-r border-white/20 bg-dark-950 flex flex-col z-20 shrink-0 relative">
         <div className="p-4 border-b border-white/10 flex items-center gap-3">
-          <button onClick={onBack} className="p-1.5 hover:bg-white/10 text-dark-300 hover:text-white transition-colors" title="Voltar para Home">
+          <button 
+            onClick={() => {
+              audioService.playClick()
+              onBack()
+            }} 
+            className="p-1.5 hover:bg-white/10 text-dark-300 hover:text-white transition-colors" 
+            title="Voltar para Home"
+          >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="min-w-0">
@@ -138,7 +167,10 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
         {/* Tabs */}
         <div className="flex border-b border-white/10 shrink-0">
           <button 
-            onClick={() => setActiveTab('sessions')}
+            onClick={() => {
+              audioService.playClick()
+              setActiveTab('sessions')
+            }}
             className={`flex-1 py-3 text-xs tracking-wider uppercase font-semibold transition-colors flex items-center justify-center gap-2 ${
               activeTab === 'sessions' ? 'border-b-2 border-white text-white' : 'text-dark-400 hover:text-white hover:bg-white/5'
             }`}
@@ -147,7 +179,10 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
             Sessões
           </button>
           <button 
-            onClick={() => setActiveTab('players')}
+            onClick={() => {
+              audioService.playClick()
+              setActiveTab('players')
+            }}
             className={`flex-1 py-3 text-xs tracking-wider uppercase font-semibold transition-colors flex items-center justify-center gap-2 ${
               activeTab === 'players' ? 'border-b-2 border-white text-white' : 'text-dark-400 hover:text-white hover:bg-white/5'
             }`}
@@ -155,13 +190,31 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
             <Users className="w-4 h-4" />
             Jogadores
           </button>
+          <button 
+            onClick={() => {
+              audioService.playClick()
+              setActiveTab('tables')
+            }}
+            className={`flex-1 py-3 text-xs tracking-wider uppercase font-semibold transition-colors flex items-center justify-center gap-2 ${
+              activeTab === 'tables' ? 'border-b-2 border-white text-white' : 'text-dark-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Hash className="w-4 h-4" />
+            Tabelas
+          </button>
         </div>
 
         {/* List Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-1">
           {activeTab === 'sessions' && (
             <>
-              <button onClick={handleOpenSessionNew} className="w-full btn-secondary py-2 justify-center mb-4 text-xs">
+              <button
+                onClick={() => {
+                  audioService.playClick()
+                  handleOpenSessionNew()
+                }}
+                className="w-full btn-secondary py-2 justify-center mb-4 text-xs"
+              >
                 <Plus className="w-4 h-4 mr-2" /> Nova Sessão
               </button>
               
@@ -174,11 +227,13 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
                       key={session.id}
                       draggable
                       onDragStart={(e) => {
+                        audioService.playSlide()
                         setDraggingSessionIdx(idx)
                         e.dataTransfer.effectAllowed = 'move'
                       }}
                       onDragEnd={() => {
                         if (draggingSessionIdx !== null && dragOverSessionIdx !== null && draggingSessionIdx !== dragOverSessionIdx) {
+                          audioService.playPop()
                           reorderSessions(draggingSessionIdx, dragOverSessionIdx)
                         }
                         setDraggingSessionIdx(null)
@@ -242,7 +297,13 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
 
           {activeTab === 'players' && (
             <>
-              <button onClick={handleOpenPlayerNew} className="w-full btn-secondary py-2 justify-center mb-4 text-xs">
+              <button
+                onClick={() => {
+                  audioService.playClick()
+                  handleOpenPlayerNew()
+                }}
+                className="w-full btn-secondary py-2 justify-center mb-4 text-xs"
+              >
                 <Plus className="w-4 h-4 mr-2" /> Novo Jogador
               </button>
               
@@ -255,11 +316,13 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
                       key={player.id}
                       draggable
                       onDragStart={(e) => {
+                        audioService.playSlide()
                         setDraggingPlayerIdx(idx)
                         e.dataTransfer.effectAllowed = 'move'
                       }}
                       onDragEnd={() => {
                         if (draggingPlayerIdx !== null && dragOverPlayerIdx !== null && draggingPlayerIdx !== dragOverPlayerIdx) {
+                          audioService.playPop()
                           reorderPlayers(draggingPlayerIdx, dragOverPlayerIdx)
                         }
                         setDraggingPlayerIdx(null)
@@ -323,16 +386,122 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
               )}
             </>
           )}
+
+          {activeTab === 'tables' && (
+            <>
+              <button
+                onClick={() => {
+                  audioService.playClick()
+                  handleOpenTableNew()
+                }}
+                className="w-full btn-secondary py-2 justify-center mb-4 text-xs"
+              >
+                <Plus className="w-4 h-4 mr-2" /> Nova Tabela
+              </button>
+              
+              {tablesList.length === 0 ? (
+                <div className="text-center p-4 text-dark-500 text-sm">Nenhuma tabela criada.</div>
+              ) : (
+                <div className="space-y-1">
+                  {tablesList.map((table, idx) => (
+                    <div
+                      key={table.id}
+                      draggable
+                      onDragStart={(e) => {
+                        audioService.playSlide()
+                        setDraggingPlayerIdx(idx) // reusing drag state for simplicity
+                        e.dataTransfer.effectAllowed = 'move'
+                      }}
+                      onDragEnd={() => {
+                        if (draggingPlayerIdx !== null && dragOverPlayerIdx !== null && draggingPlayerIdx !== dragOverPlayerIdx) {
+                          audioService.playPop()
+                          reorderTables(draggingPlayerIdx, dragOverPlayerIdx)
+                        }
+                        setDraggingPlayerIdx(null)
+                        setDragOverPlayerIdx(null)
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault()
+                        e.dataTransfer.dropEffect = 'move'
+                        setDragOverPlayerIdx(idx)
+                      }}
+                      onDragLeave={() => setDragOverPlayerIdx(null)}
+                      onClick={() => setActiveTable(table)}
+                      style={{
+                        opacity: draggingPlayerIdx === idx ? 0.35 : 1,
+                        transition: 'opacity 0.15s ease',
+                      }}
+                      className={`relative p-3 border cursor-pointer transition-colors flex items-center gap-2 select-none ${
+                        activeTable?.id === table.id
+                          ? 'border-white bg-white/5'
+                          : 'border-transparent hover:border-white/20 bg-dark-900'
+                      } ${
+                        dragOverPlayerIdx === idx && draggingPlayerIdx !== idx
+                          ? 'border-t-2 border-t-white/60'
+                          : ''
+                      }`}
+                    >
+                      <Hash className="w-4 h-4 text-dark-400" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-sm font-semibold text-white truncate">{table.name}</h4>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleOpenTableEdit(table) }}
+                            className="text-dark-400 hover:text-white"
+                          >
+                            <Settings className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
         </div>
       </aside>
 
       {/* ── Main Content (Editor) ────────────────────────────────────────── */}
       <main className="flex-1 flex flex-col bg-dark-900 relative z-20">
-        {!activeSession && !activePlayer ? (
+        {!activeSession && !activePlayer && !activeTable ? (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-dark-400 animate-fade-in">
             <BookOpen className="w-16 h-16 mb-4 opacity-20" />
             <h3 className="text-xl font-display text-white mb-2">Modo de Jogo</h3>
-            <p className="max-w-md">Selecione uma sessão ou um jogador na lateral para visualizar ou editar as anotações. Você pode usar o espaço para escrever registros da aventura.</p>
+            <p className="max-w-md">Selecione uma sessão, um jogador ou uma tabela na lateral para visualizar ou editar. Use o espaço para gerenciar sua campanha em tempo real.</p>
+          </div>
+        ) : activeTable ? (
+          <div className="flex-1 flex flex-col animate-fade-in min-h-0" key={`table-${activeTable.id}`}>
+             <header className="p-8 pb-4 shrink-0 border-b border-white/5">
+                <div className="flex items-center justify-between">
+                  <h1 className="text-3xl font-display font-bold text-white mb-2">{activeTable.name}</h1>
+                  <button 
+                    onClick={() => {
+                      audioService.playPop()
+                      const rows = JSON.parse(activeTable.content)
+                      if (rows.length === 0) return
+                      const randomIdx = Math.floor(Math.random() * rows.length)
+                      const result = rows[randomIdx]
+                      alert(`🎲 Resultado: ${result.range} - ${result.content}`)
+                    }}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-white text-black text-xs font-bold hover:bg-dark-200 active:scale-95 transition-all"
+                  >
+                    <Dices className="w-4 h-4" />
+                    Rolar Tabela
+                  </button>
+                </div>
+                <p className="text-dark-400 text-sm">{activeTable.description || 'Sem descrição.'}</p>
+             </header>
+             <div className="flex-1 overflow-y-auto p-8">
+                <div className="max-w-3xl mx-auto space-y-2">
+                  {JSON.parse(activeTable.content).map((row: any, i: number) => (
+                    <div key={i} className="flex gap-4 p-4 bg-dark-950 border border-white/5 hover:border-white/10 transition-colors">
+                      <div className="w-16 flex-shrink-0 font-mono text-sm text-dark-500 font-bold">{row.range}</div>
+                      <div className="text-sm text-white">{row.content}</div>
+                    </div>
+                  ))}
+                </div>
+             </div>
           </div>
         ) : activeSession ? (
           <div className="flex-1 flex flex-col animate-fade-in min-h-0" key={`session-${activeSession.id}`}>
@@ -446,19 +615,22 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
       {sessionModalOpen && (
         <SessionModal editTarget={editSessionTarget} onClose={() => setSessionModalOpen(false)} />
       )}
+      {tableModalOpen && (
+        <TableModal editTarget={editTableTarget} onClose={() => setTableModalOpen(false)} />
+      )}
 
       {/* ── Player Preview Modal ─────────────────────────────────────────── */}
       {previewPlayer && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-dark-950/80 backdrop-blur-sm animate-fade-in"
-          onClick={() => setPreviewPlayer(null)}
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-dark-950/80 backdrop-blur-sm animate-fade-in"
+          onClick={() => { audioService.playClick(); setPreviewPlayer(null); }}
         >
           <div 
-            className="w-full max-w-lg bg-dark-900 border border-white/20 shadow-2xl flex flex-col p-8 animate-slide-up relative"
+            className="w-full max-w-lg max-h-[90vh] bg-dark-900 border border-white/20 shadow-2xl flex flex-col p-8 animate-slide-up relative overflow-y-auto custom-scrollbar"
             onClick={(e) => e.stopPropagation()}
           >
             <button 
-              onClick={() => setPreviewPlayer(null)} 
+              onClick={() => { audioService.playClick(); setPreviewPlayer(null); }} 
               className="absolute top-4 right-4 p-2 text-dark-400 hover:text-white transition-colors"
             >
               <X className="w-5 h-5" />

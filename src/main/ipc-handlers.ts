@@ -15,7 +15,11 @@ import {
   createSession,
   updateSession,
   deleteSession,
-  getPresentPlayers
+  getPresentPlayers,
+  getTablesByCampaign,
+  createTable,
+  updateTable,
+  deleteTable
 } from './database'
 import type { CampaignFormData } from '../types'
 
@@ -78,6 +82,23 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('sessions:getPresentPlayers', (_event, sessionId: number) => {
     return getPresentPlayers(sessionId)
+  })
+
+  // ── Tables ─────────────────────────────────────────────────────────────────
+  ipcMain.handle('tables:getByCampaign', (_event, campaignId: number) => {
+    return getTablesByCampaign(campaignId)
+  })
+
+  ipcMain.handle('tables:create', (_event, data: any) => {
+    return createTable(data)
+  })
+
+  ipcMain.handle('tables:update', (_event, id: number, data: any) => {
+    return updateTable(id, data)
+  })
+
+  ipcMain.handle('tables:delete', (_event, id: number) => {
+    deleteTable(id)
   })
 
   // ── System ─────────────────────────────────────────────────────────────────

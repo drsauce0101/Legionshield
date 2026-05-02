@@ -6,6 +6,8 @@ import { CampaignDashboard } from './components/CampaignDashboard'
 import { NewCampaignModal } from './components/NewCampaignModal'
 import { LoadingScreen } from './components/LoadingScreen'
 import { SettingsModal } from './components/SettingsModal'
+import { DiceRoller } from './components/DiceRoller'
+import { audioService } from './utils/audio'
 import { useCampaignStore } from './stores/useCampaignStore'
 import type { Campaign } from '../../types'
 
@@ -98,13 +100,23 @@ export default function App(): JSX.Element {
                     className="input-field pl-9 w-56 text-select"
                   />
                 </div>
-                <button id="btn-new-campaign" onClick={handleOpenNew} className="btn-primary">
+                <button 
+                  id="btn-new-campaign" 
+                  onClick={() => {
+                    audioService.playClick()
+                    handleOpenNew()
+                  }} 
+                  className="btn-primary"
+                >
                   <Plus className="w-4 h-4" />
                   Nova Campanha
                 </button>
                 <button
                   id="btn-settings"
-                  onClick={() => setSettingsOpen(true)}
+                  onClick={() => {
+                    audioService.playClick()
+                    setSettingsOpen(true)
+                  }}
                   title="Configurações"
                   className="flex items-center justify-center w-9 h-9 border border-white/20 text-dark-400 hover:text-white hover:bg-white/10 hover:border-white/40 transition-colors"
                 >
@@ -137,6 +149,9 @@ export default function App(): JSX.Element {
       {settingsOpen && (
         <SettingsModal onClose={() => setSettingsOpen(false)} />
       )}
+
+      {/* 3D Dice Layer */}
+      <DiceRoller />
     </div>
   )
 }

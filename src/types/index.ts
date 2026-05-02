@@ -65,6 +65,27 @@ export interface SessionFormData {
   campaign_id: number
 }
 
+export interface Table {
+  id: number
+  campaign_id: number
+  name: string
+  description: string
+  content: string // JSON string of TableRow[]
+  created_at?: string
+}
+
+export interface TableRow {
+  range: string // e.g. "1-5" or "10"
+  content: string
+}
+
+export interface TableFormData {
+  name: string
+  description: string
+  content: string // JSON string
+  campaign_id: number
+}
+
 export interface SessionPlayer {
   session_id: number
   player_id: number
@@ -99,6 +120,12 @@ export interface ElectronAPI {
     update: (id: number, data: Partial<SessionFormData>, playerIds?: number[]) => Promise<Session>
     delete: (id: number) => Promise<void>
     getPresentPlayers: (sessionId: number) => Promise<number[]>
+  }
+  tables: {
+    getByCampaign: (campaignId: number) => Promise<Table[]>
+    create: (data: TableFormData) => Promise<Table>
+    update: (id: number, data: Partial<TableFormData>) => Promise<Table>
+    delete: (id: number) => Promise<void>
   }
   systems: {
     getAll: () => Promise<RPGSystem[]>

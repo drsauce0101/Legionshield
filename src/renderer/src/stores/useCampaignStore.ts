@@ -8,8 +8,10 @@ interface CampaignStore {
   activeCampaign: Campaign | null
   playersList: Player[]
   sessionsList: Session[]
+  tablesList: any[]
   activeSession: Session | null
   activePlayer: Player | null
+  activeTable: any | null
   isLoading: boolean
   error: string | null
 
@@ -37,6 +39,14 @@ interface CampaignStore {
   deleteSession: (id: number) => Promise<void>
   setActiveSession: (session: Session | null) => void
   reorderSessions: (fromIndex: number, toIndex: number) => void
+
+  // Tables
+  fetchTables: (campaignId: number) => Promise<void>
+  createTable: (data: any) => Promise<void>
+  updateTable: (id: number, data: any) => Promise<void>
+  deleteTable: (id: number) => Promise<void>
+  setActiveTable: (table: any | null) => void
+  reorderTables: (fromIndex: number, toIndex: number) => void
 }
 
 export const useCampaignStore = create<CampaignStore>((set, get) => ({
@@ -45,8 +55,10 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
   activeCampaign: null,
   playersList: [],
   sessionsList: [],
+  tablesList: [],
   activeSession: null,
   activePlayer: null,
+  activeTable: null,
   isLoading: false,
   error: null,
 
@@ -204,8 +216,9 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
     }
   },
 
-  setActiveSession: (session) => set({ activeSession: session, activePlayer: null }),
-  setActivePlayer: (player) => set({ activePlayer: player, activeSession: null }),
+  setActiveSession: (session) => set({ activeSession: session, activePlayer: null, activeTable: null }),
+  setActivePlayer: (player) => set({ activePlayer: player, activeSession: null, activeTable: null }),
+  setActiveTable: (table) => set({ activeTable: table, activeSession: null, activePlayer: null }),
 
   reorderPlayers: (fromIndex, toIndex) => set((state) => {
     const list = [...state.playersList]
@@ -219,5 +232,57 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
     const [moved] = list.splice(fromIndex, 1)
     list.splice(toIndex, 0, moved)
     return { sessionsList: list }
+  }),
+
+  fetchTables: async (campaignId: number) => {
+    try {
+      const tables = await window.api.tables.getByCampaign(campaignId)
+      set({ tablesList: tables })
+    } catch (err) {
+      set({ error: String(err) })
+    }
+  },
+
+  createTable: async (data: any) => {
+    try {
+      const newTable = await window.api.tables.create(data)
+      set((state) => ({ tablesList: [newTable, ...state.tablesList] }))
+    } catch (err) {
+      set({ error: String(err) })
+      throw err
+    }
+  },
+
+  updateTable: async (id: number, data: any) => {
+    try {
+      const updated = await window.api.tables.update(id, data)
+      set((state) => ({
+        tablesList: state.tablesList.map((t) => (t.id === id ? updated : t)),
+        activeTable: state.activeTable?.id === id ? updated : state.activeTable
+      }))
+    } catch (err) {
+      set({ error: String(err) })
+      throw err
+    }
+  },
+
+  deleteTable: async (id: number) => {
+    try {
+      await window.api.tables.delete(id)
+      set((state) => ({
+        tablesList: state.tablesList.filter((t) => t.id !== id),
+        activeTable: state.activeTable?.id === id ? null : state.activeTable
+      }))
+    } catch (err) {
+      set({ error: String(err) })
+      throw err
+    }
+  },
+
+  reorderTables: (fromIndex, toIndex) => set((state) => {
+    const list = [...state.tablesList]
+    const [moved] = list.splice(fromIndex, 1)
+    list.splice(toIndex, 0, moved)
+    return { tablesList: list }
   }),
 }))
