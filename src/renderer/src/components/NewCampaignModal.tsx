@@ -5,6 +5,7 @@ import type { Campaign, CampaignFormData } from '../../../types'
 
 interface NewCampaignModalProps {
   editTarget?: Campaign | null
+  defaultFolderId?: number | null
   onClose: () => void
 }
 
@@ -12,11 +13,12 @@ const INITIAL_FORM: CampaignFormData = {
   name: '',
   description: '',
   banner_url: '',
-  system_id: 1
+  system_id: 1,
+  folder_id: undefined
 }
 
-export function NewCampaignModal({ editTarget, onClose }: NewCampaignModalProps): JSX.Element {
-  const { systems, fetchSystems, createCampaign, updateCampaign } = useCampaignStore()
+export function NewCampaignModal({ editTarget, defaultFolderId, onClose }: NewCampaignModalProps): JSX.Element {
+  const { systems, folders, fetchSystems, fetchFolders, createCampaign, updateCampaign } = useCampaignStore()
   const [form, setForm] = useState<CampaignFormData>(INITIAL_FORM)
   const [isSaving, setIsSaving] = useState(false)
   const [bannerPreview, setBannerPreview] = useState('')
@@ -25,7 +27,8 @@ export function NewCampaignModal({ editTarget, onClose }: NewCampaignModalProps)
 
   useEffect(() => {
     if (systems.length === 0) fetchSystems()
-  }, [])
+    fetchFolders('campaign')
+  }, [fetchSystems, fetchFolders])
 
   useEffect(() => {
     if (editTarget) {
@@ -33,14 +36,18 @@ export function NewCampaignModal({ editTarget, onClose }: NewCampaignModalProps)
         name: editTarget.name,
         description: editTarget.description,
         banner_url: editTarget.banner_url,
-        system_id: editTarget.system_id
+        system_id: editTarget.system_id,
+        folder_id: editTarget.folder_id
       })
       setBannerPreview(editTarget.banner_url)
     } else {
-      setForm(INITIAL_FORM)
+      setForm({
+        ...INITIAL_FORM,
+        folder_id: defaultFolderId || undefined
+      })
       setBannerPreview('')
     }
-  }, [editTarget])
+  }, [editTarget, defaultFolderId])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -148,25 +155,46 @@ export function NewCampaignModal({ editTarget, onClose }: NewCampaignModalProps)
           </div>
 
           {/* Sistema */}
-          <div>
-            <label htmlFor="select-system" className="form-label">Sistema de RPG</label>
-            <div className="relative">
-              <select
-                id="select-system"
-                name="system_id"
-                value={form.system_id}
-                onChange={handleChange}
-                className="input-field appearance-none pr-10"
-              >
-                {systems.length === 0 ? (
-                  <option value={1}>Genérico</option>
-                ) : (
-                  systems.map((s) => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))
-                )}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-400 pointer-events-none" />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="select-system" className="form-label">Sistema de RPG</label>
+              <div className="relative">
+                <select
+                  id="select-system"
+                  name="system_id"
+                  value={form.system_id}
+                  onChange={handleChange}
+                  className="input-field appearance-none pr-10"
+                >
+                  {systems.length === 0 ? (
+                    <option value={1}>Genérico</option>
+                  ) : (
+                    systems.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))
+                  )}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-400 pointer-events-none" />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="select-folder" className="form-label">Pasta</label>
+              <div className="relative">
+                <select
+                  id="select-folder"
+                  name="folder_id"
+                  value={form.folder_id || ''}
+                  onChange={(e) => setForm(prev => ({ ...prev, folder_id: e.target.value ? Number(e.target.value) : undefined }))}
+                  className="input-field appearance-none pr-10"
+                >
+                  <option value="">Sem pasta (Raiz)</option>
+                  {folders.map((f) => (
+                    <option key={f.id} value={f.id}>{f.name}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-400 pointer-events-none" />
+              </div>
             </div>
           </div>
 

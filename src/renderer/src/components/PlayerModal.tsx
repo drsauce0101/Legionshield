@@ -7,19 +7,27 @@ import type { Player, PlayerFormData, MentionItem, PlayerAttribute } from '../..
 
 interface PlayerModalProps {
   editTarget: Player | null
+  defaultFolderId?: number | null
   onClose: () => void
 }
 
-export function PlayerModal({ editTarget, onClose }: PlayerModalProps): JSX.Element {
-  const { createPlayer, updatePlayer, deletePlayer, activeCampaign, playersList, sessionsList } = useCampaignStore()
+export function PlayerModal({ editTarget, defaultFolderId, onClose }: PlayerModalProps): JSX.Element {
+  const { createPlayer, updatePlayer, deletePlayer, activeCampaign, playersList, sessionsList, folders, fetchFolders } = useCampaignStore()
   
   const [formData, setFormData] = useState<PlayerFormData>({
     name: editTarget?.name || '',
     class_archetype: editTarget?.class_archetype || '',
     notes: editTarget?.notes || '',
     avatar_url: editTarget?.avatar_url || '',
-    campaign_id: editTarget?.campaign_id || activeCampaign?.id || 0
+    campaign_id: editTarget?.campaign_id || activeCampaign?.id || 0,
+    folder_id: editTarget?.folder_id || defaultFolderId || undefined
   })
+
+  useEffect(() => {
+    if (activeCampaign) {
+      fetchFolders('player', activeCampaign.id)
+    }
+  }, [activeCampaign, fetchFolders])
 
   const [attributes, setAttributes] = useState<PlayerAttribute[]>(() => {
     try {
@@ -145,6 +153,22 @@ export function PlayerModal({ editTarget, onClose }: PlayerModalProps): JSX.Elem
                   className="input-field w-full text-select"
                   placeholder="Ex: Mago Nível 20"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold tracking-wider text-dark-300 uppercase">
+                  Pasta
+                </label>
+                <select
+                  value={formData.folder_id || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, folder_id: e.target.value ? Number(e.target.value) : undefined }))}
+                  className="input-field w-full"
+                >
+                  <option value="">Sem pasta (Raiz)</option>
+                  {folders.map(f => (
+                    <option key={f.id} value={f.id}>{f.name}</option>
+                  ))}
+                </select>
               </div>
             </div>
 

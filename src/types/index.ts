@@ -5,12 +5,29 @@ export interface RPGSystem {
   name: string
 }
 
+export interface Folder {
+  id: number
+  name: string
+  type: 'campaign' | 'session' | 'player' | 'table'
+  campaign_id?: number
+  parent_id?: number
+  created_at?: string
+}
+
+export interface FolderFormData {
+  name: string
+  type: Folder['type']
+  campaign_id?: number
+  parent_id?: number
+}
+
 export interface Campaign {
   id: number
   name: string
   description: string
   banner_url: string
   system_id: number
+  folder_id?: number
   system_name?: string
   created_at?: string
 }
@@ -20,6 +37,7 @@ export interface CampaignFormData {
   description: string
   banner_url: string
   system_id: number
+  folder_id?: number
 }
 
 export interface PlayerAttribute {
@@ -37,6 +55,7 @@ export interface Player {
   notes: string // HTML from Rich Text
   avatar_url?: string
   attributes?: string // JSON string of PlayerAttribute[]
+  folder_id?: number
   created_at?: string
 }
 
@@ -47,6 +66,7 @@ export interface PlayerFormData {
   avatar_url?: string
   attributes?: string // JSON string of PlayerAttribute[]
   campaign_id: number
+  folder_id?: number
 }
 
 export interface Session {
@@ -55,6 +75,7 @@ export interface Session {
   title: string
   notes: string // HTML from Rich Text
   tags: string // comma separated
+  folder_id?: number
   created_at?: string
 }
 
@@ -63,6 +84,7 @@ export interface SessionFormData {
   notes: string
   tags: string
   campaign_id: number
+  folder_id?: number
 }
 
 export interface Table {
@@ -71,6 +93,7 @@ export interface Table {
   name: string
   description: string
   content: string // JSON string of TableRow[]
+  folder_id?: number
   created_at?: string
 }
 
@@ -84,6 +107,7 @@ export interface TableFormData {
   description: string
   content: string // JSON string
   campaign_id: number
+  folder_id?: number
 }
 
 export interface SessionPlayer {
@@ -125,6 +149,12 @@ export interface ElectronAPI {
     getByCampaign: (campaignId: number) => Promise<Table[]>
     create: (data: TableFormData) => Promise<Table>
     update: (id: number, data: Partial<TableFormData>) => Promise<Table>
+    delete: (id: number) => Promise<void>
+  }
+  folders: {
+    getByType: (type: Folder['type'], campaignId?: number) => Promise<Folder[]>
+    create: (data: FolderFormData) => Promise<Folder>
+    update: (id: number, data: Partial<FolderFormData>) => Promise<Folder>
     delete: (id: number) => Promise<void>
   }
   systems: {

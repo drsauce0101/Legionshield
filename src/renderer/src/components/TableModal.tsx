@@ -7,14 +7,16 @@ import type { Table, TableRow } from '../../../types'
 
 interface TableModalProps {
   editTarget: Table | null
+  defaultFolderId?: number | null
   onClose: () => void
 }
 
-export function TableModal({ editTarget, onClose }: TableModalProps): JSX.Element {
-  const { activeCampaign, createTable, updateTable, deleteTable } = useCampaignStore()
+export function TableModal({ editTarget, defaultFolderId, onClose }: TableModalProps): JSX.Element {
+  const { activeCampaign, createTable, updateTable, deleteTable, folders, fetchFolders } = useCampaignStore()
   
   const [name, setName] = useState(editTarget?.name || '')
   const [description, setDescription] = useState(editTarget?.description || '')
+  const [folderId, setFolderId] = useState<number | undefined>(editTarget?.folder_id || defaultFolderId || undefined)
   const [rows, setRows] = useState<TableRow[]>(() => {
     if (editTarget?.content) {
       try {
@@ -25,6 +27,12 @@ export function TableModal({ editTarget, onClose }: TableModalProps): JSX.Elemen
     }
     return [{ range: '1', content: '' }]
   })
+
+  useEffect(() => {
+    if (activeCampaign) {
+      fetchFolders('table', activeCampaign.id)
+    }
+  }, [activeCampaign, fetchFolders])
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
@@ -51,7 +59,8 @@ export function TableModal({ editTarget, onClose }: TableModalProps): JSX.Elemen
       name: name.trim(),
       description: description.trim(),
       content: JSON.stringify(rows),
-      campaign_id: activeCampaign.id
+      campaign_id: activeCampaign.id,
+      folder_id: folderId
     }
 
     try {
@@ -122,6 +131,19 @@ export function TableModal({ editTarget, onClose }: TableModalProps): JSX.Elemen
                   rows={2}
                   className="w-full bg-dark-950 border border-white/10 px-4 py-2.5 text-white placeholder:text-dark-700 focus:outline-none focus:border-white/30 transition-all resize-none"
                 />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-dark-500 uppercase tracking-widest mb-1.5 ml-1">Pasta</label>
+                <select
+                  value={folderId || ''}
+                  onChange={(e) => setFolderId(e.target.value ? Number(e.target.value) : undefined)}
+                  className="w-full bg-dark-950 border border-white/10 px-4 py-2.5 text-white focus:outline-none focus:border-white/30 transition-all"
+                >
+                  <option value="">Sem pasta (Raiz)</option>
+                  {folders.map(f => (
+                    <option key={f.id} value={f.id}>{f.name}</option>
+                  ))}
+                </select>
               </div>
             </div>
 

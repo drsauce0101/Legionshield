@@ -74,23 +74,50 @@ function createTables(): void {
       created_at  TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS folders (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      name        TEXT NOT NULL,
+      type        TEXT NOT NULL, -- 'campaign', 'session', 'player', 'table'
+      campaign_id INTEGER,       -- NULL if type='campaign'
+      parent_id   INTEGER,       -- for nested folders
+      created_at  TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
+      FOREIGN KEY (parent_id) REFERENCES folders(id) ON DELETE CASCADE
+    );
   `)
 }
 
 function runMigrations(): void {
-  // Check if avatar_url exists in players table
+  // Add avatar_url to players
   try {
     db.run('ALTER TABLE players ADD COLUMN avatar_url TEXT DEFAULT ""')
-  } catch (err) {
-    // Column might already exist, ignore error
-  }
+  } catch (err) {}
   
-  // Check if attributes exists in players table
+  // Add attributes to players
   try {
     db.run('ALTER TABLE players ADD COLUMN attributes TEXT DEFAULT "[]"')
-  } catch (err) {
-    // Column might already exist, ignore error
-  }
+  } catch (err) {}
+
+  // Add folder_id to campaigns
+  try {
+    db.run('ALTER TABLE campaigns ADD COLUMN folder_id INTEGER REFERENCES folders(id) ON DELETE SET NULL')
+  } catch (err) {}
+
+  // Add folder_id to players
+  try {
+    db.run('ALTER TABLE players ADD COLUMN folder_id INTEGER REFERENCES folders(id) ON DELETE SET NULL')
+  } catch (err) {}
+
+  // Add folder_id to sessions
+  try {
+    db.run('ALTER TABLE sessions ADD COLUMN folder_id INTEGER REFERENCES folders(id) ON DELETE SET NULL')
+  } catch (err) {}
+
+  // Add folder_id to tables
+  try {
+    db.run('ALTER TABLE tables ADD COLUMN folder_id INTEGER REFERENCES folders(id) ON DELETE SET NULL')
+  } catch (err) {}
 }
 
 function seedDefaultData(): void {
@@ -126,9 +153,9 @@ export function getCampaigns(): Campaign[] {
 
 export function createCampaign(data: CampaignFormData): Campaign {
   db.run(
-    `INSERT INTO campaigns (name, description, banner_url, system_id)
-     VALUES (?, ?, ?, ?)`,
-    [data.name, data.description, data.banner_url, data.system_id]
+    `INSERT INTO campaigns (name, description, banner_url, system_id, folder_id)
+     VALUES (?, ?, ?, ?, ?)`,
+    [data.name, data.description, data.banner_url, data.system_id, data.folder_id ?? null]
   )
 
   const lastId = (db.get('SELECT last_insert_rowid() as id') as { id: number }).id
@@ -172,8 +199,8 @@ export function getPlayersByCampaign(campaignId: number): any[] {
 
 export function createPlayer(data: any): any {
   db.run(
-    `INSERT INTO players (campaign_id, name, class_archetype, notes, avatar_url, attributes) VALUES (?, ?, ?, ?, ?, ?)`,
-    [data.campaign_id, data.name, data.class_archetype, data.notes, data.avatar_url || '', data.attributes || '[]']
+    `INSERT INTO players (campaign_id, name, class_archetype, notes, avatar_url, attributes, folder_id) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [data.campaign_id, data.name, data.class_archetype, data.notes, data.avatar_url || '', data.attributes || '[]', data.folder_id ?? null]
   )
   const lastId = (db.get('SELECT last_insert_rowid() as id') as { id: number }).id
   return db.get(`SELECT * FROM players WHERE id = ?`, [lastId])
@@ -200,8 +227,8 @@ export function getSessionsByCampaign(campaignId: number): any[] {
 
 export function createSession(data: any, playerIds: number[]): any {
   db.run(
-    `INSERT INTO sessions (campaign_id, title, notes, tags) VALUES (?, ?, ?, ?)`,
-    [data.campaign_id, data.title, data.notes, data.tags]
+    `INSERT INTO sessions (campaign_id, title, notes, tags, folder_id) VALUES (?, ?, ?, ?, ?)`,
+    [data.campaign_id, data.title, data.notes, data.tags, data.folder_id ?? null]
   )
   const lastId = (db.get('SELECT last_insert_rowid() as id') as { id: number }).id
 
@@ -251,8 +278,8 @@ export function getTablesByCampaign(campaignId: number): any[] {
 
 export function createTable(data: any): any {
   db.run(
-    `INSERT INTO tables (campaign_id, name, description, content) VALUES (?, ?, ?, ?)`,
-    [data.campaign_id, data.name, data.description, data.content || '[]']
+    `INSERT INTO tables (campaign_id, name, description, content, folder_id) VALUES (?, ?, ?, ?, ?)`,
+    [data.campaign_id, data.name, data.description, data.content || '[]', data.folder_id ?? null]
   )
   const lastId = (db.get('SELECT last_insert_rowid() as id') as { id: number }).id
   return db.get(`SELECT * FROM tables WHERE id = ?`, [lastId])
@@ -271,4 +298,37 @@ export function updateTable(id: number, data: any): any {
 
 export function deleteTable(id: number): void {
   db.run('DELETE FROM tables WHERE id = ?', [id])
+}
+
+// ─── Folder Queries ───────────────────────────────────────────────────────────
+
+export function getFolders(type: string, campaignId?: number): any[] {
+  if (campaignId) {
+    return db.all('SELECT * FROM folders WHERE type = ? AND campaign_id = ? ORDER BY name ASC', [type, campaignId])
+  }
+  return db.all('SELECT * FROM folders WHERE type = ? AND campaign_id IS NULL ORDER BY name ASC', [type])
+}
+
+export function createFolder(data: any): any {
+  db.run(
+    'INSERT INTO folders (name, type, campaign_id, parent_id) VALUES (?, ?, ?, ?)',
+    [data.name, data.type, data.campaign_id ?? null, data.parent_id ?? null]
+  )
+  const lastId = (db.get('SELECT last_insert_rowid() as id') as { id: number }).id
+  return db.get('SELECT * FROM folders WHERE id = ?', [lastId])
+}
+
+export function updateFolder(id: number, data: any): any {
+  const entries = Object.entries(data).filter(([, v]) => v !== undefined)
+  if (entries.length === 0) return db.get('SELECT * FROM folders WHERE id = ?', [id])
+
+  const sets = entries.map(([k]) => `${k} = ?`).join(', ')
+  const values = entries.map(([, v]) => v)
+
+  db.run(`UPDATE folders SET ${sets} WHERE id = ?`, [...values, id] as any[])
+  return db.get('SELECT * FROM folders WHERE id = ?', [id])
+}
+
+export function deleteFolder(id: number): void {
+  db.run('DELETE FROM folders WHERE id = ?', [id])
 }

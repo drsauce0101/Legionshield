@@ -19,7 +19,11 @@ import {
   getTablesByCampaign,
   createTable,
   updateTable,
-  deleteTable
+  deleteTable,
+  getFolders,
+  createFolder,
+  updateFolder,
+  deleteFolder
 } from './database'
 import type { CampaignFormData } from '../types'
 
@@ -99,6 +103,23 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('tables:delete', (_event, id: number) => {
     deleteTable(id)
+  })
+  
+  // ── Folders ────────────────────────────────────────────────────────────────
+  ipcMain.handle('folders:getByType', (_event, type: string, campaignId?: number) => {
+    return getFolders(type, campaignId)
+  })
+
+  ipcMain.handle('folders:create', (_event, data: any) => {
+    return createFolder(data)
+  })
+
+  ipcMain.handle('folders:update', (_event, id: number, data: any) => {
+    return updateFolder(id, data)
+  })
+
+  ipcMain.handle('folders:delete', (_event, id: number) => {
+    deleteFolder(id)
   })
 
   // ── System ─────────────────────────────────────────────────────────────────

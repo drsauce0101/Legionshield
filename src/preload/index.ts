@@ -31,6 +31,12 @@ const api = {
     update: (id: number, data: any) => ipcRenderer.invoke('tables:update', id, data),
     delete: (id: number) => ipcRenderer.invoke('tables:delete', id)
   },
+  folders: {
+    getByType: (type: string, campaignId?: number) => ipcRenderer.invoke('folders:getByType', type, campaignId),
+    create: (data: any) => ipcRenderer.invoke('folders:create', data),
+    update: (id: number, data: any) => ipcRenderer.invoke('folders:update', id, data),
+    delete: (id: number) => ipcRenderer.invoke('folders:delete', id)
+  },
   system: {
     selectImage: () => ipcRenderer.invoke('system:selectImage')
   },

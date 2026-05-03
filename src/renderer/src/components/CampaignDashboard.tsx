@@ -1,13 +1,17 @@
-import React, { useEffect, useState } from 'react'
-import { ArrowLeft, Users, BookOpen, Plus, Settings, X, Hash, Dices } from 'lucide-react'
+import React, { useEffect, useState, useMemo } from 'react'
+import { ArrowLeft, Users, BookOpen, Plus, Settings, X, Hash, Dices, Trash2 } from 'lucide-react'
 import { audioService } from '../utils/audio'
 import { useCampaignStore } from '../stores/useCampaignStore'
 import { PlayerModal } from './PlayerModal'
 import { SessionModal } from './SessionModal'
 import { TableModal } from './TableModal'
+import { FolderModal } from './FolderModal'
+import { FolderCard } from './FolderCard'
 import { MultiTabEditor } from './MultiTabEditor'
 import { requestDiceRoll } from './DiceRoller'
 import { TableView } from './TableView'
+import { ContextMenu } from './ContextMenu'
+import { useContextMenu } from '../utils/useContextMenu'
 import type { Player, Session, MentionItem } from '../../../types'
 
 interface CampaignDashboardProps {
@@ -24,10 +28,8 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
     fetchSessions,
     activeSession,
     setActiveSession,
-    updateSession,
     activePlayer,
     setActivePlayer,
-    updatePlayer,
     reorderPlayers,
     reorderSessions,
     tablesList,
@@ -35,10 +37,21 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
     reorderTables,
     deleteTable,
     activeTable,
-    setActiveTable
+    setActiveTable,
+    folders,
+    fetchFolders,
+    deleteFolder,
+    updateCampaign,
+    updatePlayer,
+    updateSession,
+    updateTable,
+    updateFolder
   } = useCampaignStore()
 
+  const { contextMenuProps, showContextMenu } = useContextMenu()
+
   const [activeTab, setActiveTab] = useState<'sessions' | 'players' | 'tables'>('sessions')
+  const [currentFolderId, setCurrentFolderId] = useState<number | null>(null)
   
   // Modals state
   const [playerModalOpen, setPlayerModalOpen] = useState(false)
@@ -50,14 +63,28 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
   const [tableModalOpen, setTableModalOpen] = useState(false)
   const [editTableTarget, setEditTableTarget] = useState<any | null>(null)
 
+  const [folderModalOpen, setFolderModalOpen] = useState(false)
+  const [folderEditTarget, setFolderEditTarget] = useState<any | null>(null)
+
   const [presentPlayerIds, setPresentPlayerIds] = useState<number[]>([])
   const [previewPlayer, setPreviewPlayer] = useState<Player | null>(null)
 
-  // Drag-and-drop state
-  const [draggingSessionIdx, setDraggingSessionIdx] = useState<number | null>(null)
-  const [dragOverSessionIdx, setDragOverSessionIdx] = useState<number | null>(null)
-  const [draggingPlayerIdx, setDraggingPlayerIdx] = useState<number | null>(null)
-  const [dragOverPlayerIdx, setDragOverPlayerIdx] = useState<number | null>(null)
+  // Reset folder when changing tabs
+  useEffect(() => {
+    setCurrentFolderId(null)
+  }, [activeTab])
+
+  // Fetch folders for current tab
+  useEffect(() => {
+    if (activeCampaign) {
+      const typeMap: Record<string, 'session' | 'player' | 'table'> = {
+        sessions: 'session',
+        players: 'player',
+        tables: 'table'
+      }
+      fetchFolders(typeMap[activeTab], activeCampaign.id)
+    }
+  }, [activeCampaign, activeTab, fetchFolders])
 
   // Generate mentionable items
   const mentionItems: MentionItem[] = React.useMemo(() => {
@@ -135,12 +162,47 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
     setTableModalOpen(true)
   }
 
+  const handleOpenFolderModal = (editTarget: any = null) => {
+    setFolderEditTarget(editTarget)
+    setFolderModalOpen(true)
+  }
+
+  const handleItemDrop = async (itemId: string, itemType: string, targetFolderId: number) => {
+    const id = Number(itemId)
+    if (itemType === 'session') await updateSession(id, { folder_id: targetFolderId })
+    else if (itemType === 'player') await updatePlayer(id, { folder_id: targetFolderId })
+    else if (itemType === 'table') await updateTable(id, { folder_id: targetFolderId })
+    else if (itemType === 'folder') {
+      if (id === targetFolderId) return
+      await updateFolder(id, { parent_id: targetFolderId })
+    }
+  }
+
   // Handle auto-save for session notes
   const handleSessionNotesChange = (notes: string) => {
     if (activeSession) {
       updateSession(activeSession.id, { notes })
     }
   }
+
+  const folderItemCounts = useMemo(() => {
+    const counts: Record<number, number> = {}
+    folders.forEach(f => {
+      const subFolders = folders.filter(sf => sf.parent_id === f.id).length
+      const subSessions = sessionsList.filter(s => s.folder_id === f.id).length
+      const subPlayers = playersList.filter(p => p.folder_id === f.id).length
+      const subTables = tablesList.filter(t => t.folder_id === f.id).length
+      counts[f.id] = subFolders + subSessions + subPlayers + subTables
+    })
+    return counts
+  }, [folders, sessionsList, playersList, tablesList])
+
+  const filteredSessions = sessionsList.filter(s => (s.folder_id || null) === currentFolderId)
+  const filteredPlayers = playersList.filter(p => (p.folder_id || null) === currentFolderId)
+  const filteredTables = tablesList.filter(t => (t.folder_id || null) === currentFolderId)
+  const filteredFolders = folders.filter(f => (f.parent_id || null) === currentFolderId)
+
+  const currentFolder = folders.find(f => f.id === currentFolderId)
 
   if (!activeCampaign) return <div className="p-8 text-white">Nenhuma campanha selecionada.</div>
 
@@ -209,81 +271,94 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
 
         {/* List Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-1">
+          {/* Folder Navigation Header */}
+            <div className="flex items-center justify-between mb-4 px-1">
+              <div className="flex items-center gap-2">
+                {currentFolderId && (
+                  <button 
+                    onClick={() => setCurrentFolderId(currentFolder?.parent_id || null)}
+                    className="p-1 text-dark-400 hover:text-white transition-colors"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                  </button>
+                )}
+                <span className="text-[10px] font-bold text-dark-500 uppercase tracking-widest">
+                  {currentFolder ? currentFolder.name : 'Arquivos'}
+                </span>
+              </div>
+              <button 
+                onClick={() => handleOpenFolderModal()}
+                className="text-[10px] font-bold text-dark-400 hover:text-white transition-colors uppercase tracking-widest"
+              >
+                + Pasta
+              </button>
+            </div>
+          <div 
+            className="flex-1 min-h-[200px]"
+            onContextMenu={(e) => {
+              const items = [
+                { 
+                  label: activeTab === 'sessions' ? 'Nova Sessão' : activeTab === 'players' ? 'Novo Jogador' : 'Nova Tabela', 
+                  icon: <Plus className="w-4 h-4" />, 
+                  onClick: activeTab === 'sessions' ? handleOpenSessionNew : activeTab === 'players' ? handleOpenPlayerNew : handleOpenTableNew 
+                },
+                { label: 'Nova Pasta', icon: <Plus className="w-4 h-4" />, onClick: () => handleOpenFolderModal() }
+              ]
+              showContextMenu(e, items)
+            }}
+          >
+
           {activeTab === 'sessions' && (
             <>
-              <button
-                onClick={() => {
-                  audioService.playClick()
-                  handleOpenSessionNew()
-                }}
-                className="w-full btn-secondary py-2 justify-center mb-4 text-xs"
-              >
-                <Plus className="w-4 h-4 mr-2" /> Nova Sessão
-              </button>
-              
-              {sessionsList.length === 0 ? (
-                <div className="text-center p-4 text-dark-500 text-sm">Nenhuma sessão criada.</div>
-              ) : (
-                <div className="space-y-1">
-                  {sessionsList.map((session, idx) => (
+              <div className="space-y-1">
+                {filteredFolders.map((folder) => (
+                  <FolderCard 
+                    key={folder.id} 
+                    folder={folder} 
+                    itemCount={folderItemCounts[folder.id]}
+                    onEdit={handleOpenFolderModal} 
+                    onDelete={deleteFolder} 
+                    onClick={(f) => setCurrentFolderId(f.id)} 
+                    onDrop={handleItemDrop}
+                  />
+                ))}
+
+                {filteredSessions.length === 0 && filteredFolders.length === 0 ? (
+                  <div className="text-center p-4 text-dark-500 text-sm">Vazio.</div>
+                ) : (
+                  filteredSessions.map((session) => (
                     <div
                       key={session.id}
-                      draggable
-                      onDragStart={(e) => {
-                        audioService.playSlide()
-                        setDraggingSessionIdx(idx)
-                        e.dataTransfer.effectAllowed = 'move'
-                      }}
-                      onDragEnd={() => {
-                        if (draggingSessionIdx !== null && dragOverSessionIdx !== null && draggingSessionIdx !== dragOverSessionIdx) {
-                          audioService.playPop()
-                          reorderSessions(draggingSessionIdx, dragOverSessionIdx)
-                        }
-                        setDraggingSessionIdx(null)
-                        setDragOverSessionIdx(null)
-                      }}
-                      onDragOver={(e) => {
-                        e.preventDefault()
-                        e.dataTransfer.dropEffect = 'move'
-                        setDragOverSessionIdx(idx)
-                      }}
-                      onDragLeave={() => setDragOverSessionIdx(null)}
                       onClick={() => setActiveSession(session)}
-                      style={{
-                        opacity: draggingSessionIdx === idx ? 0.35 : 1,
-                        transition: 'opacity 0.15s ease',
+                      draggable={true}
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData('itemId', session.id.toString())
+                        e.dataTransfer.setData('itemType', 'session')
+                      }}
+                      onContextMenu={(e) => {
+                        e.stopPropagation()
+                        showContextMenu(e, [
+                          { label: 'Editar', icon: <Trash2 className="w-4 h-4" />, onClick: () => handleOpenSessionEdit(session) },
+                          { label: 'Excluir', icon: <Trash2 className="w-4 h-4" />, onClick: () => {
+                            if (confirm(`Excluir sessão "${session.title}"?`)) {
+                              window.api.sessions.delete(session.id).then(() => fetchSessions(activeCampaign.id))
+                            }
+                          }, variant: 'danger' }
+                        ])
                       }}
                       className={`relative p-3 border cursor-pointer transition-colors select-none ${
                         activeSession?.id === session.id
                           ? 'border-white bg-white/5'
                           : 'border-transparent hover:border-white/20 bg-dark-900'
-                      } ${
-                        dragOverSessionIdx === idx && draggingSessionIdx !== idx
-                          ? 'border-t-2 border-t-white/60'
-                          : ''
                       }`}
                     >
                       <div className="flex items-center gap-2">
-                        {/* Drag handle */}
-                        <span
-                          className="text-dark-600 hover:text-dark-300 cursor-grab active:cursor-grabbing shrink-0 transition-colors text-base leading-none select-none"
-                          title="Arraste para reordenar"
-                          onMouseDown={(e) => e.stopPropagation()}
-                        >
-                          ⠿
-                        </span>
                         <div className="flex-1 min-w-0 flex items-center justify-between">
                           <h4 className="text-sm font-semibold text-white truncate">{session.title}</h4>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleOpenSessionEdit(session) }}
-                            className="text-dark-400 hover:text-white ml-1 shrink-0"
-                          >
-                            <Settings className="w-3.5 h-3.5" />
-                          </button>
                         </div>
                       </div>
                       {session.tags && (
-                        <div className="flex gap-1 mt-2 overflow-x-auto no-scrollbar pl-5">
+                        <div className="flex gap-1 mt-2 overflow-x-auto no-scrollbar">
                           {session.tags.split(',').map((t, i) => (
                             <span key={i} className="text-[10px] px-1.5 py-0.5 bg-dark-950 border border-white/10 text-dark-300 whitespace-nowrap">
                               {t.trim()}
@@ -292,74 +367,56 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
                         </div>
                       )}
                     </div>
-                  ))}
-                </div>
-              )}
+                  ))
+                )}
+              </div>
             </>
           )}
 
           {activeTab === 'players' && (
             <>
-              <button
-                onClick={() => {
-                  audioService.playClick()
-                  handleOpenPlayerNew()
-                }}
-                className="w-full btn-secondary py-2 justify-center mb-4 text-xs"
-              >
-                <Plus className="w-4 h-4 mr-2" /> Novo Jogador
-              </button>
-              
-              {playersList.length === 0 ? (
-                <div className="text-center p-4 text-dark-500 text-sm">Nenhum jogador criado.</div>
-              ) : (
-                <div className="space-y-1">
-                  {playersList.map((player, idx) => (
+              <div className="space-y-1">
+                {filteredFolders.map((folder) => (
+                  <FolderCard 
+                    key={folder.id} 
+                    folder={folder} 
+                    itemCount={folderItemCounts[folder.id]}
+                    onEdit={handleOpenFolderModal} 
+                    onDelete={deleteFolder} 
+                    onClick={(f) => setCurrentFolderId(f.id)} 
+                    onDrop={handleItemDrop}
+                  />
+                ))}
+
+                {filteredPlayers.length === 0 && filteredFolders.length === 0 ? (
+                  <div className="text-center p-4 text-dark-500 text-sm">Vazio.</div>
+                ) : (
+                  filteredPlayers.map((player) => (
                     <div
                       key={player.id}
-                      draggable
-                      onDragStart={(e) => {
-                        audioService.playSlide()
-                        setDraggingPlayerIdx(idx)
-                        e.dataTransfer.effectAllowed = 'move'
-                      }}
-                      onDragEnd={() => {
-                        if (draggingPlayerIdx !== null && dragOverPlayerIdx !== null && draggingPlayerIdx !== dragOverPlayerIdx) {
-                          audioService.playPop()
-                          reorderPlayers(draggingPlayerIdx, dragOverPlayerIdx)
-                        }
-                        setDraggingPlayerIdx(null)
-                        setDragOverPlayerIdx(null)
-                      }}
-                      onDragOver={(e) => {
-                        e.preventDefault()
-                        e.dataTransfer.dropEffect = 'move'
-                        setDragOverPlayerIdx(idx)
-                      }}
-                      onDragLeave={() => setDragOverPlayerIdx(null)}
                       onClick={() => setActivePlayer(player)}
-                      style={{
-                        opacity: draggingPlayerIdx === idx ? 0.35 : 1,
-                        transition: 'opacity 0.15s ease',
+                      draggable={true}
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData('itemId', player.id.toString())
+                        e.dataTransfer.setData('itemType', 'player')
+                      }}
+                      onContextMenu={(e) => {
+                        e.stopPropagation()
+                        showContextMenu(e, [
+                          { label: 'Editar', icon: <Trash2 className="w-4 h-4" />, onClick: () => handleOpenPlayerEdit(player) },
+                          { label: 'Excluir', icon: <Trash2 className="w-4 h-4" />, onClick: () => {
+                            if (confirm(`Excluir jogador "${player.name}"?`)) {
+                              window.api.players.delete(player.id).then(() => fetchPlayers(activeCampaign.id))
+                            }
+                          }, variant: 'danger' }
+                        ])
                       }}
                       className={`relative p-3 border cursor-pointer transition-colors flex items-center gap-2 select-none ${
                         activePlayer?.id === player.id
                           ? 'border-white bg-white/5'
                           : 'border-transparent hover:border-white/20 bg-dark-900'
-                      } ${
-                        dragOverPlayerIdx === idx && draggingPlayerIdx !== idx
-                          ? 'border-t-2 border-t-white/60'
-                          : ''
                       }`}
                     >
-                      {/* Drag handle */}
-                      <span
-                        className="text-dark-600 hover:text-dark-300 cursor-grab active:cursor-grabbing shrink-0 transition-colors text-base leading-none select-none"
-                        title="Arraste para reordenar"
-                        onMouseDown={(e) => e.stopPropagation()}
-                      >
-                        ⠿
-                      </span>
                       {/* Avatar */}
                       <div className="w-9 h-9 flex-shrink-0 bg-dark-950 border border-white/20 flex items-center justify-center overflow-hidden">
                         {player.avatar_url ? (
@@ -374,94 +431,73 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
                           <h4 className="text-sm font-semibold text-white truncate">{player.name}</h4>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleOpenPlayerEdit(player) }}
-                            className="text-dark-400 hover:text-white"
-                          >
-                            <Settings className="w-3.5 h-3.5" />
-                          </button>
                         </div>
                         <p className="text-xs text-dark-400 mt-0.5 truncate">{player.class_archetype || 'Sem classe'}</p>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
+                  ))
+                )}
+              </div>
             </>
           )}
 
           {activeTab === 'tables' && (
             <>
-              <button
-                onClick={() => {
-                  audioService.playClick()
-                  handleOpenTableNew()
-                }}
-                className="w-full btn-secondary py-2 justify-center mb-4 text-xs"
-              >
-                <Plus className="w-4 h-4 mr-2" /> Nova Tabela
-              </button>
-              
-              {tablesList.length === 0 ? (
-                <div className="text-center p-4 text-dark-500 text-sm">Nenhuma tabela criada.</div>
-              ) : (
-                <div className="space-y-1">
-                  {tablesList.map((table, idx) => (
+              <div className="space-y-1">
+                {filteredFolders.map((folder) => (
+                  <FolderCard 
+                    key={folder.id} 
+                    folder={folder} 
+                    itemCount={folderItemCounts[folder.id]}
+                    onEdit={handleOpenFolderModal} 
+                    onDelete={deleteFolder} 
+                    onClick={(f) => setCurrentFolderId(f.id)} 
+                    onDrop={handleItemDrop}
+                  />
+                ))}
+
+                {filteredTables.length === 0 && filteredFolders.length === 0 ? (
+                  <div className="text-center p-4 text-dark-500 text-sm">Vazio.</div>
+                ) : (
+                  filteredTables.map((table) => (
                     <div
                       key={table.id}
-                      draggable
-                      onDragStart={(e) => {
-                        audioService.playSlide()
-                        setDraggingPlayerIdx(idx) // reusing drag state for simplicity
-                        e.dataTransfer.effectAllowed = 'move'
-                      }}
-                      onDragEnd={() => {
-                        if (draggingPlayerIdx !== null && dragOverPlayerIdx !== null && draggingPlayerIdx !== dragOverPlayerIdx) {
-                          audioService.playPop()
-                          reorderTables(draggingPlayerIdx, dragOverPlayerIdx)
-                        }
-                        setDraggingPlayerIdx(null)
-                        setDragOverPlayerIdx(null)
-                      }}
-                      onDragOver={(e) => {
-                        e.preventDefault()
-                        e.dataTransfer.dropEffect = 'move'
-                        setDragOverPlayerIdx(idx)
-                      }}
-                      onDragLeave={() => setDragOverPlayerIdx(null)}
                       onClick={() => setActiveTable(table)}
-                      style={{
-                        opacity: draggingPlayerIdx === idx ? 0.35 : 1,
-                        transition: 'opacity 0.15s ease',
+                      draggable={true}
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData('itemId', table.id.toString())
+                        e.dataTransfer.setData('itemType', 'table')
+                      }}
+                      onContextMenu={(e) => {
+                        e.stopPropagation()
+                        showContextMenu(e, [
+                          { label: 'Editar', icon: <Trash2 className="w-4 h-4" />, onClick: () => handleOpenTableEdit(table) },
+                          { label: 'Excluir', icon: <Trash2 className="w-4 h-4" />, onClick: () => {
+                            if (confirm(`Excluir tabela "${table.name}"?`)) {
+                              deleteTable(table.id)
+                            }
+                          }, variant: 'danger' }
+                        ])
                       }}
                       className={`relative p-3 border cursor-pointer transition-colors flex items-center gap-2 select-none ${
                         activeTable?.id === table.id
                           ? 'border-white bg-white/5'
                           : 'border-transparent hover:border-white/20 bg-dark-900'
-                      } ${
-                        dragOverPlayerIdx === idx && draggingPlayerIdx !== idx
-                          ? 'border-t-2 border-t-white/60'
-                          : ''
                       }`}
                     >
                       <Hash className="w-4 h-4 text-dark-400" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
                           <h4 className="text-sm font-semibold text-white truncate">{table.name}</h4>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleOpenTableEdit(table) }}
-                            className="text-dark-400 hover:text-white"
-                          >
-                            <Settings className="w-3.5 h-3.5" />
-                          </button>
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
+                  ))
+                )}
+              </div>
             </>
           )}
+          </div>
         </div>
       </aside>
 
@@ -582,13 +618,22 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
 
       {/* ── Modals ──────────────────────────────────────────────────────── */}
       {playerModalOpen && (
-        <PlayerModal editTarget={editPlayerTarget} onClose={() => setPlayerModalOpen(false)} />
+        <PlayerModal editTarget={editPlayerTarget} defaultFolderId={currentFolderId} onClose={() => setPlayerModalOpen(false)} />
       )}
       {sessionModalOpen && (
-        <SessionModal editTarget={editSessionTarget} onClose={() => setSessionModalOpen(false)} />
+        <SessionModal editTarget={editSessionTarget} defaultFolderId={currentFolderId} onClose={() => setSessionModalOpen(false)} />
       )}
       {tableModalOpen && (
-        <TableModal editTarget={editTableTarget} onClose={() => setTableModalOpen(false)} />
+        <TableModal editTarget={editTableTarget} defaultFolderId={currentFolderId} onClose={() => setTableModalOpen(false)} />
+      )}
+      {folderModalOpen && (
+        <FolderModal 
+          editTarget={folderEditTarget} 
+          type={activeTab === 'sessions' ? 'session' : activeTab === 'players' ? 'player' : 'table'} 
+          campaignId={activeCampaign.id}
+          parentFolderId={currentFolderId || undefined}
+          onClose={() => setFolderModalOpen(false)} 
+        />
       )}
 
       {/* ── Player Preview Modal ─────────────────────────────────────────── */}
@@ -679,6 +724,7 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
           </div>
         </div>
       )}
+      {contextMenuProps.visible && <ContextMenu {...contextMenuProps} />}
     </div>
   )
 }

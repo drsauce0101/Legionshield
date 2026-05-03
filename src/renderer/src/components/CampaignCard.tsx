@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Edit3, Trash2, Sword, Calendar } from 'lucide-react'
 import { ConfirmModal } from './ConfirmModal'
+import { ContextMenu } from './ContextMenu'
+import { useContextMenu } from '../utils/useContextMenu'
 import type { Campaign } from '../../../types'
 
 interface CampaignCardProps {
@@ -11,6 +13,7 @@ interface CampaignCardProps {
 }
 
 export function CampaignCard({ campaign, onEdit, onDelete, onClick }: CampaignCardProps): JSX.Element {
+  const { contextMenuProps, showContextMenu } = useContextMenu()
   const [isDeleting, setIsDeleting] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [imgError, setImgError] = useState(false)
@@ -38,6 +41,19 @@ export function CampaignCard({ campaign, onEdit, onDelete, onClick }: CampaignCa
       <article
         id={`campaign-card-${campaign.id}`}
         onClick={() => onClick(campaign)}
+        draggable={true}
+        onDragStart={(e) => {
+          e.dataTransfer.setData('itemId', campaign.id.toString())
+          e.dataTransfer.setData('itemType', 'campaign')
+          e.dataTransfer.effectAllowed = 'move'
+        }}
+        onContextMenu={(e) => {
+          e.stopPropagation()
+          showContextMenu(e, [
+            { label: 'Editar', icon: <Edit3 className="w-4 h-4" />, onClick: () => onEdit(campaign) },
+            { label: 'Excluir', icon: <Trash2 className="w-4 h-4" />, onClick: () => setShowDeleteConfirm(true), variant: 'danger' }
+          ])
+        }}
         className={`
           group relative flex flex-col overflow-hidden rounded-none cursor-pointer
           border border-white/10 hover:border-white/50
@@ -46,6 +62,7 @@ export function CampaignCard({ campaign, onEdit, onDelete, onClick }: CampaignCa
           shadow-card hover:shadow-card-hover
           hover:-translate-y-1
           animate-fade-in
+          active:scale-95 active:rotate-1
           ${isDeleting ? 'opacity-50 pointer-events-none' : ''}
         `}
       >
@@ -66,26 +83,6 @@ export function CampaignCard({ campaign, onEdit, onDelete, onClick }: CampaignCa
           )}
           {/* Gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-dark-900 via-transparent to-transparent" />
-
-          {/* Action buttons — appear on hover */}
-          <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-200 translate-y-1 group-hover:translate-y-0">
-            <button
-              id={`btn-edit-${campaign.id}`}
-              onClick={handleEdit}
-              className="flex items-center justify-center w-8 h-8 rounded-none bg-dark-900/90 backdrop-blur-sm text-dark-300 hover:text-black hover:bg-white transition-all duration-150 no-drag"
-              title="Editar campanha"
-            >
-              <Edit3 className="w-3.5 h-3.5" />
-            </button>
-            <button
-              id={`btn-delete-${campaign.id}`}
-              onClick={handleDeleteClick}
-              className="flex items-center justify-center w-8 h-8 rounded-none bg-dark-900/90 backdrop-blur-sm text-dark-300 hover:text-white hover:bg-red-600 transition-all duration-150 no-drag"
-              title="Excluir campanha"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-          </div>
         </div>
 
         {/* Info */}
@@ -130,6 +127,8 @@ export function CampaignCard({ campaign, onEdit, onDelete, onClick }: CampaignCa
         onCancel={() => setShowDeleteConfirm(false)}
         isDanger={true}
       />
+
+      {contextMenuProps.visible && <ContextMenu {...contextMenuProps} />}
     </>
   )
 }

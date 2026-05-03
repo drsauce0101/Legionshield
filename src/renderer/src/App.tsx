@@ -28,19 +28,24 @@ export default function App(): JSX.Element {
     })
   }, [fetchCampaigns])
 
-  const handleOpenNew = () => {
+  const [defaultFolderId, setDefaultFolderId] = useState<number | null>(null)
+
+  const handleOpenNew = (folderId?: number | null) => {
     setEditTarget(null)
+    setDefaultFolderId(folderId || null)
     setModalOpen(true)
   }
 
   const handleOpenEdit = (campaign: Campaign) => {
     setEditTarget(campaign)
+    setDefaultFolderId(null)
     setModalOpen(true)
   }
 
   const handleCloseModal = () => {
     setModalOpen(false)
     setEditTarget(null)
+    setDefaultFolderId(null)
   }
 
   return (
@@ -100,17 +105,6 @@ export default function App(): JSX.Element {
                     className="input-field pl-9 w-56 text-select"
                   />
                 </div>
-                <button 
-                  id="btn-new-campaign" 
-                  onClick={() => {
-                    audioService.playClick()
-                    handleOpenNew()
-                  }} 
-                  className="btn-primary"
-                >
-                  <Plus className="w-4 h-4" />
-                  Nova Campanha
-                </button>
                 <button
                   id="btn-settings"
                   onClick={() => {
@@ -141,6 +135,7 @@ export default function App(): JSX.Element {
       {modalOpen && (
         <NewCampaignModal
           editTarget={editTarget}
+          defaultFolderId={defaultFolderId}
           onClose={handleCloseModal}
         />
       )}

@@ -1,10 +1,15 @@
 import { create } from 'zustand'
-import type { Campaign, CampaignFormData, RPGSystem, Player, PlayerFormData, Session, SessionFormData } from '../../../types'
+import type { 
+  Campaign, CampaignFormData, RPGSystem, 
+  Player, PlayerFormData, Session, SessionFormData,
+  Folder, FolderFormData
+} from '../../../types'
 
 interface CampaignStore {
   // State
   campaigns: Campaign[]
   systems: RPGSystem[]
+  folders: Folder[]
   activeCampaign: Campaign | null
   playersList: Player[]
   sessionsList: Session[]
@@ -23,6 +28,12 @@ interface CampaignStore {
   deleteCampaign: (id: number) => Promise<void>
   setActiveCampaign: (campaign: Campaign | null) => void
   clearError: () => void
+
+  // Folders
+  fetchFolders: (type: Folder['type'], campaignId?: number) => Promise<void>
+  createFolder: (data: FolderFormData) => Promise<Folder>
+  updateFolder: (id: number, data: Partial<FolderFormData>) => Promise<void>
+  deleteFolder: (id: number) => Promise<void>
 
   // Players
   fetchPlayers: (campaignId: number) => Promise<void>
@@ -55,12 +66,57 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
   activeCampaign: null,
   playersList: [],
   sessionsList: [],
+  folders: [],
   tablesList: [],
   activeSession: null,
   activePlayer: null,
   activeTable: null,
   isLoading: false,
   error: null,
+
+  fetchFolders: async (type, campaignId) => {
+    try {
+      const folders = await window.api.folders.getByType(type, campaignId)
+      set({ folders })
+    } catch (err) {
+      set({ error: String(err) })
+    }
+  },
+
+  createFolder: async (data) => {
+    try {
+      const newFolder = await window.api.folders.create(data)
+      set((state) => ({ folders: [...state.folders, newFolder] }))
+      return newFolder
+    } catch (err) {
+      set({ error: String(err) })
+      throw err
+    }
+  },
+
+  updateFolder: async (id, data) => {
+    try {
+      const updated = await window.api.folders.update(id, data)
+      set((state) => ({
+        folders: state.folders.map((f) => (f.id === id ? updated : f))
+      }))
+    } catch (err) {
+      set({ error: String(err) })
+      throw err
+    }
+  },
+
+  deleteFolder: async (id) => {
+    try {
+      await window.api.folders.delete(id)
+      set((state) => ({
+        folders: state.folders.filter((f) => f.id !== id)
+      }))
+    } catch (err) {
+      set({ error: String(err) })
+      throw err
+    }
+  },
 
   fetchCampaigns: async () => {
     set({ isLoading: true, error: null })
