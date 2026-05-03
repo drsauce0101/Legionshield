@@ -37,13 +37,27 @@ module.exports = {
         'fade-in':    'fadeIn 0.3s ease-out',
         'slide-up':   'slideUp 0.3s ease-out',
         'scale-in':   'scaleIn 0.2s ease-out',
-        'shimmer':    'shimmer 1.5s infinite'
+        'shimmer':    'shimmer 1.5s infinite',
+        'dice-roll':  'diceRoll 0.6s ease-in-out',
+        'dice-result': 'diceResult 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
       },
       keyframes: {
         fadeIn:  { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
         slideUp: { '0%': { opacity: '0', transform: 'translateY(16px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
         scaleIn: { '0%': { opacity: '0', transform: 'scale(0.95)' }, '100%': { opacity: '1', transform: 'scale(1)' } },
-        shimmer: { '0%': { backgroundPosition: '-200% 0' }, '100%': { backgroundPosition: '200% 0' } }
+        shimmer: { '0%': { backgroundPosition: '-200% 0' }, '100%': { backgroundPosition: '200% 0' } },
+        diceRoll: {
+          '0%': { transform: 'rotate(0deg) scale(0.5)', opacity: '0' },
+          '20%': { transform: 'rotate(-20deg) scale(1.1)', opacity: '1' },
+          '40%': { transform: 'rotate(20deg) scale(0.9)' },
+          '60%': { transform: 'rotate(-10deg) scale(1.05)' },
+          '80%': { transform: 'rotate(5deg) scale(0.98)' },
+          '100%': { transform: 'rotate(0deg) scale(1)' }
+        },
+        diceResult: {
+          '0%': { transform: 'scale(0.5)', opacity: '0' },
+          '100%': { transform: 'scale(1)', opacity: '1' }
+        }
       }
     }
   },

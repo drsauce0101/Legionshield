@@ -6,11 +6,14 @@ import { PlayerModal } from './PlayerModal'
 import { SessionModal } from './SessionModal'
 import { TableModal } from './TableModal'
 import { MultiTabEditor } from './MultiTabEditor'
+import { requestDiceRoll } from './DiceRoller'
+import { TableView } from './TableView'
 import type { Player, Session, MentionItem } from '../../../types'
 
 interface CampaignDashboardProps {
   onBack: () => void
 }
+
 
 export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Element {
   const { 
@@ -471,38 +474,7 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
             <p className="max-w-md">Selecione uma sessão, um jogador ou uma tabela na lateral para visualizar ou editar. Use o espaço para gerenciar sua campanha em tempo real.</p>
           </div>
         ) : activeTable ? (
-          <div className="flex-1 flex flex-col animate-fade-in min-h-0" key={`table-${activeTable.id}`}>
-             <header className="p-8 pb-4 shrink-0 border-b border-white/5">
-                <div className="flex items-center justify-between">
-                  <h1 className="text-3xl font-display font-bold text-white mb-2">{activeTable.name}</h1>
-                  <button 
-                    onClick={() => {
-                      audioService.playPop()
-                      const rows = JSON.parse(activeTable.content)
-                      if (rows.length === 0) return
-                      const randomIdx = Math.floor(Math.random() * rows.length)
-                      const result = rows[randomIdx]
-                      alert(`🎲 Resultado: ${result.range} - ${result.content}`)
-                    }}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-white text-black text-xs font-bold hover:bg-dark-200 active:scale-95 transition-all"
-                  >
-                    <Dices className="w-4 h-4" />
-                    Rolar Tabela
-                  </button>
-                </div>
-                <p className="text-dark-400 text-sm">{activeTable.description || 'Sem descrição.'}</p>
-             </header>
-             <div className="flex-1 overflow-y-auto p-8">
-                <div className="max-w-3xl mx-auto space-y-2">
-                  {JSON.parse(activeTable.content).map((row: any, i: number) => (
-                    <div key={i} className="flex gap-4 p-4 bg-dark-950 border border-white/5 hover:border-white/10 transition-colors">
-                      <div className="w-16 flex-shrink-0 font-mono text-sm text-dark-500 font-bold">{row.range}</div>
-                      <div className="text-sm text-white">{row.content}</div>
-                    </div>
-                  ))}
-                </div>
-             </div>
-          </div>
+          <TableView table={activeTable} />
         ) : activeSession ? (
           <div className="flex-1 flex flex-col animate-fade-in min-h-0" key={`session-${activeSession.id}`}>
             <header className="p-8 pb-4 shrink-0 border-b border-white/5">
