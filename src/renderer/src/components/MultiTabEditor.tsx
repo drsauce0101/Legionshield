@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { Plus, X } from 'lucide-react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { Plus, X, GripVertical } from 'lucide-react'
 import { RichTextEditor } from './RichTextEditor'
 import type { MentionItem } from '../../../types'
 
@@ -21,6 +21,8 @@ interface MultiTabEditorProps {
 export function MultiTabEditor({ content, onChange, placeholder, readOnly, mentionItems, onMentionClick }: MultiTabEditorProps): JSX.Element {
   const [tabs, setTabs] = useState<TabData[]>([])
   const [activeTabId, setActiveTabId] = useState<string>('')
+  const [draggedTabId, setDraggedTabId] = useState<string | null>(null)
+  const [dragOverTabId, setDragOverTabId] = useState<string | null>(null)
   const prevContentRef = useRef<string>('')
 
   // Parse content safely
@@ -59,12 +61,16 @@ export function MultiTabEditor({ content, onChange, placeholder, readOnly, menti
     }
   }, [content, activeTabId, tabs.length])
 
+  const saveTabs = useCallback((newTabs: TabData[]) => {
+    const newStringified = JSON.stringify(newTabs)
+    prevContentRef.current = newStringified
+    onChange?.(newStringified)
+  }, [onChange])
+
   const handleEditorChange = (newContent: string) => {
     setTabs(prev => {
       const newTabs = prev.map(t => t.id === activeTabId ? { ...t, content: newContent } : t)
-      const newStringified = JSON.stringify(newTabs)
-      prevContentRef.current = newStringified
-      onChange?.(newStringified)
+      saveTabs(newTabs)
       return newTabs
     })
   }
@@ -72,9 +78,7 @@ export function MultiTabEditor({ content, onChange, placeholder, readOnly, menti
   const handleTabTitleChange = (id: string, newTitle: string) => {
     setTabs(prev => {
       const newTabs = prev.map(t => t.id === id ? { ...t, title: newTitle } : t)
-      const newStringified = JSON.stringify(newTabs)
-      prevContentRef.current = newStringified
-      onChange?.(newStringified)
+      saveTabs(newTabs)
       return newTabs
     })
   }
@@ -83,9 +87,7 @@ export function MultiTabEditor({ content, onChange, placeholder, readOnly, menti
     const newId = `tab_${Date.now()}`
     setTabs(prev => {
       const newTabs = [...prev, { id: newId, title: 'Nova Aba', content: '' }]
-      const newStringified = JSON.stringify(newTabs)
-      prevContentRef.current = newStringified
-      onChange?.(newStringified)
+      saveTabs(newTabs)
       return newTabs
     })
     setActiveTabId(newId)
@@ -102,11 +104,51 @@ export function MultiTabEditor({ content, onChange, placeholder, readOnly, menti
         setActiveTabId(newTabs[0].id)
       }
       
-      const newStringified = JSON.stringify(newTabs)
-      prevContentRef.current = newStringified
-      onChange?.(newStringified)
+      saveTabs(newTabs)
       return newTabs
     })
+  }
+
+  // ─── Drag and Drop Handlers ──────────────────────────────────────────────────
+  
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    if (readOnly) return
+    setDraggedTabId(id)
+    e.dataTransfer.effectAllowed = 'move'
+    // Set an empty image to avoid default ghosting if we want custom, 
+    // but here we'll use default ghosting for simplicity.
+  }
+
+  const handleDragOver = (e: React.DragEvent, id: string) => {
+    if (readOnly) return
+    e.preventDefault()
+    if (draggedTabId === id) return
+    setDragOverTabId(id)
+  }
+
+  const handleDragEnd = () => {
+    setDraggedTabId(null)
+    setDragOverTabId(null)
+  }
+
+  const handleDrop = (e: React.DragEvent, targetId: string) => {
+    if (readOnly || !draggedTabId || draggedTabId === targetId) return
+    e.preventDefault()
+
+    setTabs(prev => {
+      const dragIndex = prev.findIndex(t => t.id === draggedTabId)
+      const hoverIndex = prev.findIndex(t => t.id === targetId)
+      
+      const newTabs = [...prev]
+      const [draggedItem] = newTabs.splice(dragIndex, 1)
+      newTabs.splice(hoverIndex, 0, draggedItem)
+      
+      saveTabs(newTabs)
+      return newTabs
+    })
+    
+    setDraggedTabId(null)
+    setDragOverTabId(null)
   }
 
   const activeTab = tabs.find(t => t.id === activeTabId) || tabs[0]
@@ -119,19 +161,31 @@ export function MultiTabEditor({ content, onChange, placeholder, readOnly, menti
       <div className="flex items-end bg-dark-950 border-b border-white/10 shrink-0 h-11 overflow-x-auto overflow-y-hidden no-scrollbar px-2 gap-1 relative z-10">
         {tabs.map((tab) => {
           const isActive = tab.id === activeTabId
+          const isBeingDragged = tab.id === draggedTabId
+          const isDragOver = tab.id === dragOverTabId
+
           return (
             <div
               key={tab.id}
               onClick={() => setActiveTabId(tab.id)}
-              className={`group flex items-center gap-2 px-4 py-2 border border-b-0 rounded-t-sm cursor-pointer transition-colors whitespace-nowrap min-w-[120px] max-w-[200px] ${
+              draggable={!readOnly}
+              onDragStart={(e) => handleDragStart(e, tab.id)}
+              onDragOver={(e) => handleDragOver(e, tab.id)}
+              onDragEnd={handleDragEnd}
+              onDrop={(e) => handleDrop(e, tab.id)}
+              className={`group flex items-center gap-2 px-3 py-2 border border-b-0 rounded-t-sm cursor-pointer transition-all whitespace-nowrap min-w-[120px] max-w-[200px] select-none ${
                 isActive 
                   ? 'bg-dark-900 border-white/20 text-white z-20 relative' 
                   : 'bg-dark-950 border-transparent text-dark-400 hover:bg-white/5 hover:text-white z-10'
-              }`}
+              } ${isBeingDragged ? 'opacity-30' : 'opacity-100'} ${isDragOver ? 'border-r-white/40 translate-x-1' : ''}`}
               style={isActive ? { marginBottom: '-1px' } : {}}
             >
+              {!readOnly && (
+                <GripVertical className="w-3 h-3 text-dark-600 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 cursor-grab active:cursor-grabbing" />
+              )}
+              
               {readOnly ? (
-                <span className="text-sm font-semibold truncate flex-1 pointer-events-none select-none">
+                <span className="text-sm font-semibold truncate flex-1 pointer-events-none">
                   {tab.title}
                 </span>
               ) : (
