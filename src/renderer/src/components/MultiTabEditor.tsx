@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Plus, X, GripVertical } from 'lucide-react'
 import { RichTextEditor } from './RichTextEditor'
+import { ConfirmModal } from './ConfirmModal'
 import type { MentionItem } from '../../../types'
 
 export interface TabData {
@@ -23,6 +24,7 @@ export function MultiTabEditor({ content, onChange, placeholder, readOnly, menti
   const [activeTabId, setActiveTabId] = useState<string>('')
   const [draggedTabId, setDraggedTabId] = useState<string | null>(null)
   const [dragOverTabId, setDragOverTabId] = useState<string | null>(null)
+  const [tabToDelete, setTabToDelete] = useState<TabData | null>(null)
   const prevContentRef = useRef<string>('')
 
   // Parse content safely
@@ -93,20 +95,27 @@ export function MultiTabEditor({ content, onChange, placeholder, readOnly, menti
     setActiveTabId(newId)
   }
 
-  const handleRemoveTab = (id: string, e: React.MouseEvent) => {
+  const handleRemoveTabClick = (tab: TabData, e: React.MouseEvent) => {
     e.stopPropagation()
+    // If tab is empty, just remove it without confirmation
+    if (!tab.content || tab.content === '<p></p>' || tab.content === '[]') {
+      confirmRemoveTab(tab.id)
+      return
+    }
+    setTabToDelete(tab)
+  }
+
+  const confirmRemoveTab = (id: string) => {
     setTabs(prev => {
-      if (prev.length <= 1) return prev // Ensure at least one tab exists
+      if (prev.length <= 1) return prev 
       const newTabs = prev.filter(t => t.id !== id)
-      
-      // If we removed the active tab, switch to the first available one
       if (activeTabId === id) {
         setActiveTabId(newTabs[0].id)
       }
-      
       saveTabs(newTabs)
       return newTabs
     })
+    setTabToDelete(null)
   }
 
   // ─── Drag and Drop Handlers ──────────────────────────────────────────────────
@@ -156,7 +165,8 @@ export function MultiTabEditor({ content, onChange, placeholder, readOnly, menti
   if (tabs.length === 0) return <div />
 
   return (
-    <div className="flex flex-col w-full h-full flex-1 min-h-0 bg-dark-900 relative">
+    <>
+      <div className="flex flex-col w-full h-full flex-1 min-h-0 bg-dark-900 relative">
       {/* Tab Bar */}
       <div className="flex items-end bg-dark-950 border-b border-white/10 shrink-0 h-11 overflow-x-auto overflow-y-hidden no-scrollbar px-2 gap-1 relative z-10">
         {tabs.map((tab) => {
@@ -204,7 +214,7 @@ export function MultiTabEditor({ content, onChange, placeholder, readOnly, menti
               {!readOnly && tabs.length > 1 && (
                 <button
                   type="button"
-                  onClick={(e) => handleRemoveTab(tab.id, e)}
+                  onClick={(e) => handleRemoveTabClick(tab, e)}
                   className={`p-0.5 rounded-full hover:bg-white/20 transition-colors flex-shrink-0 ${isActive ? 'text-dark-300 hover:text-white' : 'opacity-0 group-hover:opacity-100'}`}
                   title="Fechar aba"
                 >
@@ -241,6 +251,18 @@ export function MultiTabEditor({ content, onChange, placeholder, readOnly, menti
           />
         )}
       </div>
+
     </div>
+
+    <ConfirmModal 
+        isOpen={!!tabToDelete}
+        title="Excluir Aba"
+        message={`Tem certeza que deseja excluir a aba "${tabToDelete?.title}"? Todo o conteúdo desta aba será perdido.`}
+        confirmText="Excluir"
+        onConfirm={() => tabToDelete && confirmRemoveTab(tabToDelete.id)}
+        onCancel={() => setTabToDelete(null)}
+        isDanger={true}
+      />
+    </>
   )
 }

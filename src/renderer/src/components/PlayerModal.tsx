@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { X, Image } from 'lucide-react'
+import { X, Image, Trash2 } from 'lucide-react'
 import { useCampaignStore } from '../stores/useCampaignStore'
 import { MultiTabEditor } from './MultiTabEditor'
+import { ConfirmModal } from './ConfirmModal'
 import type { Player, PlayerFormData, MentionItem, PlayerAttribute } from '../../../types'
 
 interface PlayerModalProps {
@@ -10,7 +11,7 @@ interface PlayerModalProps {
 }
 
 export function PlayerModal({ editTarget, onClose }: PlayerModalProps): JSX.Element {
-  const { createPlayer, updatePlayer, activeCampaign, playersList, sessionsList } = useCampaignStore()
+  const { createPlayer, updatePlayer, deletePlayer, activeCampaign, playersList, sessionsList } = useCampaignStore()
   
   const [formData, setFormData] = useState<PlayerFormData>({
     name: editTarget?.name || '',
@@ -27,6 +28,8 @@ export function PlayerModal({ editTarget, onClose }: PlayerModalProps): JSX.Elem
       return []
     }
   })
+
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   useEffect(() => {
     setFormData(prev => ({ ...prev, attributes: JSON.stringify(attributes) }))
@@ -88,178 +91,209 @@ export function PlayerModal({ editTarget, onClose }: PlayerModalProps): JSX.Elem
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-dark-950/80 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-5xl bg-dark-900 border border-white/20 shadow-2xl animate-slide-up flex flex-col h-full max-h-[90vh]">
-        
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-white/10 shrink-0">
-          <h2 className="font-display font-semibold text-xl tracking-wide text-white">
-            {editTarget ? 'Editar Jogador' : 'Novo Jogador'}
-          </h2>
-          <button onClick={onClose} className="p-2 text-dark-400 hover:text-white transition-colors">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+  const handleDelete = async () => {
+    if (!editTarget) return
+    try {
+      await deletePlayer(editTarget.id)
+      onClose()
+    } catch (err) {
+      console.error(err)
+    }
+  }
 
-        {/* Body */}
-        <form id="player-form" onSubmit={handleSubmit} className="p-6 flex-1 overflow-y-auto space-y-6 flex flex-col">
-          <div className="grid grid-cols-2 gap-6 shrink-0">
-            <div className="space-y-2">
-              <label className="block text-xs font-semibold tracking-wider text-dark-300 uppercase">
-                Nome do Jogador/Personagem *
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                className="input-field w-full text-select"
-                placeholder="Ex: Gandalf"
-                autoFocus
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <label className="block text-xs font-semibold tracking-wider text-dark-300 uppercase">
-                Classe / Arquétipo
-              </label>
-              <input
-                type="text"
-                value={formData.class_archetype}
-                onChange={(e) => setFormData(prev => ({ ...prev, class_archetype: e.target.value }))}
-                className="input-field w-full text-select"
-                placeholder="Ex: Mago Nível 20"
-              />
-            </div>
+  return (
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-dark-950/80 backdrop-blur-sm animate-fade-in">
+        <div className="w-full max-w-5xl bg-dark-900 border border-white/20 shadow-2xl animate-slide-up flex flex-col h-full max-h-[90vh]">
+          
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 border-b border-white/10 shrink-0">
+            <h2 className="font-display font-semibold text-xl tracking-wide text-white">
+              {editTarget ? 'Editar Jogador' : 'Novo Jogador'}
+            </h2>
+            <button onClick={onClose} className="p-2 text-dark-400 hover:text-white transition-colors">
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
-          <div className="space-y-2 shrink-0">
-            <label className="block text-xs font-semibold tracking-wider text-dark-300 uppercase">
-              Foto de Perfil
-            </label>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 flex-shrink-0 bg-dark-950 border border-white/20 flex items-center justify-center overflow-hidden">
-                {formData.avatar_url ? (
-                  <img src={formData.avatar_url} alt="Avatar Preview" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-dark-600 text-xs text-center leading-none">Sem<br/>Foto</span>
-                )}
-              </div>
-              <div className="flex-1 flex gap-2">
+          {/* Body */}
+          <form id="player-form" onSubmit={handleSubmit} className="p-6 flex-1 overflow-y-auto space-y-6 flex flex-col">
+            <div className="grid grid-cols-2 gap-6 shrink-0">
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold tracking-wider text-dark-300 uppercase">
+                  Nome do Jogador/Personagem *
+                </label>
                 <input
                   type="text"
-                  value={formData.avatar_url || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, avatar_url: e.target.value }))}
-                  className="input-field w-full text-select flex-1"
-                  placeholder="URL ou arquivo local..."
+                  required
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  className="input-field w-full text-select"
+                  placeholder="Ex: Gandalf"
+                  autoFocus
                 />
-                <button
-                  type="button"
-                  onClick={handleSelectImage}
-                  className="px-3 py-2 bg-dark-800 border border-white/20 text-white hover:bg-dark-700 transition-colors flex items-center justify-center"
-                  title="Selecionar imagem do computador"
+              </div>
+              
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold tracking-wider text-dark-300 uppercase">
+                  Classe / Arquétipo
+                </label>
+                <input
+                  type="text"
+                  value={formData.class_archetype}
+                  onChange={(e) => setFormData(prev => ({ ...prev, class_archetype: e.target.value }))}
+                  className="input-field w-full text-select"
+                  placeholder="Ex: Mago Nível 20"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2 shrink-0">
+              <label className="block text-xs font-semibold tracking-wider text-dark-300 uppercase">
+                Foto de Perfil
+              </label>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 flex-shrink-0 bg-dark-950 border border-white/20 flex items-center justify-center overflow-hidden">
+                  {formData.avatar_url ? (
+                    <img src={formData.avatar_url} alt="Avatar Preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-dark-600 text-xs text-center leading-none">Sem<br/>Foto</span>
+                  )}
+                </div>
+                <div className="flex-1 flex gap-2">
+                  <input
+                    type="text"
+                    value={formData.avatar_url || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, avatar_url: e.target.value }))}
+                    className="input-field w-full text-select flex-1"
+                    placeholder="URL ou arquivo local..."
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSelectImage}
+                    className="px-3 py-2 bg-dark-800 border border-white/20 text-white hover:bg-dark-700 transition-colors flex items-center justify-center"
+                    title="Selecionar imagem do computador"
+                  >
+                    <Image className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3 shrink-0">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-semibold tracking-wider text-dark-300 uppercase">
+                  Atributos / Status
+                </label>
+                <button 
+                  type="button" 
+                  onClick={() => setAttributes(prev => [...prev, { name: '', value: '' }])}
+                  className="text-xs text-dark-400 hover:text-white transition-colors flex items-center gap-1 font-semibold"
                 >
-                  <Image className="w-4 h-4" />
+                  + Adicionar Atributo
                 </button>
               </div>
+              
+              {attributes.length > 0 && (
+                <div className="space-y-2">
+                  {attributes.map((attr, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={attr.name}
+                        onChange={(e) => {
+                          const newAttrs = [...attributes]
+                          newAttrs[index].name = e.target.value
+                          setAttributes(newAttrs)
+                        }}
+                        className="input-field w-1/3 text-sm py-1.5"
+                        placeholder="Nome (ex: HP)"
+                      />
+                      <input
+                        type="text"
+                        value={attr.value}
+                        onChange={(e) => {
+                          const newAttrs = [...attributes]
+                          newAttrs[index].value = e.target.value
+                          setAttributes(newAttrs)
+                        }}
+                        className="input-field w-1/3 text-sm py-1.5"
+                        placeholder="Valor (ex: 10)"
+                      />
+                      <span className="text-dark-400">/</span>
+                      <input
+                        type="text"
+                        value={attr.max_value || ''}
+                        onChange={(e) => {
+                          const newAttrs = [...attributes]
+                          newAttrs[index].max_value = e.target.value
+                          setAttributes(newAttrs)
+                        }}
+                        className="input-field w-1/4 text-sm py-1.5"
+                        placeholder="Max (Opcional)"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newAttrs = [...attributes]
+                          newAttrs.splice(index, 1)
+                          setAttributes(newAttrs)
+                        }}
+                        className="p-1.5 text-red-400 hover:bg-red-400/10 rounded transition-colors ml-auto flex-shrink-0"
+                        title="Remover atributo"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
 
-          <div className="space-y-3 shrink-0">
-            <div className="flex items-center justify-between">
-              <label className="block text-xs font-semibold tracking-wider text-dark-300 uppercase">
-                Atributos / Status
+            <div className="space-y-2 flex-1 flex flex-col min-h-[300px]">
+              <label className="block text-xs font-semibold tracking-wider text-dark-300 uppercase shrink-0">
+                Anotações do Personagem
               </label>
+              <MultiTabEditor 
+                content={formData.notes} 
+                onChange={(notes) => setFormData(prev => ({ ...prev, notes }))} 
+                placeholder="Descreva o background, inventário, etc..."
+                mentionItems={mentionItems}
+                onMentionClick={handleMentionClick}
+              />
+            </div>
+          </form>
+
+          {/* Footer */}
+          <div className="flex items-center justify-end gap-3 p-6 border-t border-white/10 bg-dark-950 shrink-0">
+            {editTarget && (
               <button 
                 type="button" 
-                onClick={() => setAttributes(prev => [...prev, { name: '', value: '' }])}
-                className="text-xs text-brand-400 hover:text-brand-300 transition-colors flex items-center gap-1 font-semibold"
+                onClick={() => setShowDeleteConfirm(true)} 
+                className="btn-danger mr-auto"
               >
-                + Adicionar Atributo
+                <Trash2 className="w-4 h-4 mr-2" /> Excluir Jogador
               </button>
-            </div>
-            
-            {attributes.length > 0 && (
-              <div className="space-y-2">
-                {attributes.map((attr, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={attr.name}
-                      onChange={(e) => {
-                        const newAttrs = [...attributes]
-                        newAttrs[index].name = e.target.value
-                        setAttributes(newAttrs)
-                      }}
-                      className="input-field w-1/3 text-sm py-1.5"
-                      placeholder="Nome (ex: HP)"
-                    />
-                    <input
-                      type="text"
-                      value={attr.value}
-                      onChange={(e) => {
-                        const newAttrs = [...attributes]
-                        newAttrs[index].value = e.target.value
-                        setAttributes(newAttrs)
-                      }}
-                      className="input-field w-1/3 text-sm py-1.5"
-                      placeholder="Valor (ex: 10)"
-                    />
-                    <span className="text-dark-400">/</span>
-                    <input
-                      type="text"
-                      value={attr.max_value || ''}
-                      onChange={(e) => {
-                        const newAttrs = [...attributes]
-                        newAttrs[index].max_value = e.target.value
-                        setAttributes(newAttrs)
-                      }}
-                      className="input-field w-1/4 text-sm py-1.5"
-                      placeholder="Max (Opcional)"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const newAttrs = [...attributes]
-                        newAttrs.splice(index, 1)
-                        setAttributes(newAttrs)
-                      }}
-                      className="p-1.5 text-red-400 hover:bg-red-400/10 rounded transition-colors ml-auto flex-shrink-0"
-                      title="Remover atributo"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
             )}
+            <button type="button" onClick={onClose} className="btn-secondary">
+              Cancelar
+            </button>
+            <button type="submit" form="player-form" className="btn-primary">
+              {editTarget ? 'Salvar Alterações' : 'Criar Jogador'}
+            </button>
           </div>
-
-          <div className="space-y-2 flex-1 flex flex-col min-h-[300px]">
-            <label className="block text-xs font-semibold tracking-wider text-dark-300 uppercase shrink-0">
-              Anotações do Personagem
-            </label>
-            <MultiTabEditor 
-              content={formData.notes} 
-              onChange={(notes) => setFormData(prev => ({ ...prev, notes }))} 
-              placeholder="Descreva o background, inventário, etc..."
-              mentionItems={mentionItems}
-              onMentionClick={handleMentionClick}
-            />
-          </div>
-        </form>
-
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-3 p-6 border-t border-white/10 bg-dark-950 shrink-0">
-          <button type="button" onClick={onClose} className="btn-secondary">
-            Cancelar
-          </button>
-          <button type="submit" form="player-form" className="btn-primary">
-            {editTarget ? 'Salvar Alterações' : 'Criar Jogador'}
-          </button>
         </div>
       </div>
-    </div>
+
+      <ConfirmModal 
+        isOpen={showDeleteConfirm}
+        title="Excluir Jogador"
+        message={`Tem certeza que deseja excluir o jogador "${formData.name}"? Esta ação não pode ser desfeita.`}
+        confirmText="Excluir"
+        onConfirm={handleDelete}
+        onCancel={() => setShowDeleteConfirm(false)}
+        isDanger={true}
+      />
+    </>
   )
 }
