@@ -1,7 +1,7 @@
 import { app, shell, BrowserWindow, ipcMain, protocol } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import { initDatabase } from './database'
+import { initDatabase, closeDatabase } from './database'
 import { registerIpcHandlers } from './ipc-handlers'
 // @ts-ignore
 import icon from '../../resources/icon.png?asset'
@@ -105,4 +105,8 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
+})
+
+app.on('will-quit', () => {
+  closeDatabase()
 })

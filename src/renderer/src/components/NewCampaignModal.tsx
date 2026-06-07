@@ -155,46 +155,25 @@ export function NewCampaignModal({ editTarget, defaultFolderId, onClose }: NewCa
           </div>
 
           {/* Sistema */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="select-system" className="form-label">Sistema de RPG</label>
-              <div className="relative">
-                <select
-                  id="select-system"
-                  name="system_id"
-                  value={form.system_id}
-                  onChange={handleChange}
-                  className="input-field appearance-none pr-10"
-                >
-                  {systems.length === 0 ? (
-                    <option value={1}>Genérico</option>
-                  ) : (
-                    systems.map((s) => (
-                      <option key={s.id} value={s.id}>{s.name}</option>
-                    ))
-                  )}
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-400 pointer-events-none" />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="select-folder" className="form-label">Pasta</label>
-              <div className="relative">
-                <select
-                  id="select-folder"
-                  name="folder_id"
-                  value={form.folder_id || ''}
-                  onChange={(e) => setForm(prev => ({ ...prev, folder_id: e.target.value ? Number(e.target.value) : undefined }))}
-                  className="input-field appearance-none pr-10"
-                >
-                  <option value="">Sem pasta (Raiz)</option>
-                  {folders.map((f) => (
-                    <option key={f.id} value={f.id}>{f.name}</option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-400 pointer-events-none" />
-              </div>
+          <div>
+            <label htmlFor="select-system" className="form-label">Sistema de RPG</label>
+            <div className="relative">
+              <select
+                id="select-system"
+                name="system_id"
+                value={form.system_id}
+                onChange={handleChange}
+                className="input-field appearance-none pr-10"
+              >
+                {systems.length === 0 ? (
+                  <option value={1}>Genérico</option>
+                ) : (
+                  systems.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))
+                )}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-400 pointer-events-none" />
             </div>
           </div>
 

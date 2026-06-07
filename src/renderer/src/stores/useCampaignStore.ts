@@ -19,8 +19,10 @@ interface CampaignStore {
   activeTable: any | null
   isLoading: boolean
   error: string | null
+  isDiceRollerHidden: boolean
 
   // Actions
+  setDiceRollerHidden: (hidden: boolean) => void
   fetchCampaigns: () => Promise<void>
   fetchSystems: () => Promise<void>
   createCampaign: (data: CampaignFormData) => Promise<Campaign>
@@ -73,6 +75,9 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
   activeTable: null,
   isLoading: false,
   error: null,
+  isDiceRollerHidden: false,
+
+  setDiceRollerHidden: (hidden) => set({ isDiceRollerHidden: hidden }),
 
   fetchFolders: async (type, campaignId) => {
     try {

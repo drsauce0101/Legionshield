@@ -3,8 +3,14 @@
  * Uses synthesized minimalist sounds to ensure zero-dependency and instant loading.
  */
 
+import { useSettingsStore } from '../stores/useSettingsStore';
+
 class AudioService {
   private context: AudioContext | null = null;
+
+  private isEnabled(): boolean {
+    return useSettingsStore.getState().soundEnabled;
+  }
 
   private init() {
     if (!this.context) {
@@ -17,7 +23,7 @@ class AudioService {
    */
   public playClick() {
     this.init();
-    if (!this.context) return;
+    if (!this.context || !this.isEnabled()) return;
 
     const osc = this.context.createOscillator();
     const gain = this.context.createGain();
@@ -41,7 +47,7 @@ class AudioService {
    */
   public playPop() {
     this.init();
-    if (!this.context) return;
+    if (!this.context || !this.isEnabled()) return;
 
     const osc = this.context.createOscillator();
     const gain = this.context.createGain();
@@ -65,7 +71,7 @@ class AudioService {
    */
   public playSlide() {
     this.init();
-    if (!this.context) return;
+    if (!this.context || !this.isEnabled()) return;
 
     const osc = this.context.createOscillator();
     const gain = this.context.createGain();

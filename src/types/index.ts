@@ -75,6 +75,8 @@ export interface Session {
   title: string
   notes: string // HTML from Rich Text
   tags: string // comma separated
+  moodboard: string // JSON array of strings
+  canvas: string // JSON ReactFlow state
   folder_id?: number
   created_at?: string
 }
@@ -83,6 +85,8 @@ export interface SessionFormData {
   title: string
   notes: string
   tags: string
+  moodboard?: string
+  canvas?: string
   campaign_id: number
   folder_id?: number
 }

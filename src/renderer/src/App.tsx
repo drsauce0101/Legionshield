@@ -9,10 +9,11 @@ import { SettingsModal } from './components/SettingsModal'
 import { DiceRoller } from './components/DiceRoller'
 import { audioService } from './utils/audio'
 import { useCampaignStore } from './stores/useCampaignStore'
+import { useSettingsStore } from './stores/useSettingsStore'
 import type { Campaign } from '../../types'
 
 export default function App(): JSX.Element {
-  const { fetchCampaigns, campaigns, error, clearError, activeCampaign, setActiveCampaign } = useCampaignStore()
+  const { fetchCampaigns, campaigns, error, clearError, activeCampaign, setActiveCampaign, isDiceRollerHidden } = useCampaignStore()
   const [modalOpen, setModalOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<Campaign | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -48,9 +49,27 @@ export default function App(): JSX.Element {
     setDefaultFolderId(null)
   }
 
+  const { backgroundImage } = useSettingsStore()
+
   return (
-    <div className="flex flex-col h-screen bg-dark-950 overflow-hidden">
-      <LoadingScreen isVisible={isAppLoading} />
+    <div className="flex flex-col h-screen bg-dark-950 overflow-hidden relative">
+      {/* Dynamic Background Image */}
+      {backgroundImage && (
+        <div 
+          className="fixed inset-0 z-0 pointer-events-none transition-opacity duration-1000 animate-fade-in"
+          style={{ opacity: 0.35 }}
+        >
+          <div 
+            className="absolute inset-0 bg-cover bg-center bg-no-repeat blur-[2px] scale-101"
+            style={{ backgroundImage: `url(${backgroundImage})` }}
+          />
+          {/* Overlay to blend with black design */}
+          <div className="absolute inset-0 bg-gradient-to-b from-dark-950 via-dark-950/10 to-dark-950" />
+        </div>
+      )}
+
+      <div className="relative z-10 flex flex-col h-full w-full">
+        <LoadingScreen isVisible={isAppLoading} />
 
       {/* Custom Title Bar */}
       <TitleBar />
@@ -146,7 +165,8 @@ export default function App(): JSX.Element {
       )}
 
       {/* 3D Dice Layer */}
-      <DiceRoller />
+      {!isDiceRollerHidden && <DiceRoller />}
+      </div>
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { Dices, X, RotateCcw, Play, History, Trash2 } from 'lucide-react'
 import { audioService } from '../utils/audio'
+import { GiD4, GiPerspectiveDiceSixFacesSix, GiDiceEightFacesEight, GiD10, GiD12, GiDiceTwentyFacesTwenty } from 'react-icons/gi'
 
 // ─── Global Dice Event Bus ────────────────────────────────────────────────────
 type DiceEventHandler = (notation: string, onResult?: (results: number[]) => void) => void
@@ -13,17 +14,17 @@ export function requestDiceRoll(notation: string, onResult?: (results: number[])
 // ─── Die SVG Icons ────────────────────────────────────────────────────────────
 const DieIcon = ({ type, className = "w-5 h-5" }: { type: string, className?: string }) => {
   switch (type) {
-    case 'd4': return <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3L2 20h20L12 3z" /></svg>
-    case 'd6': return <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="12" cy="12" r="1" fill="currentColor" /></svg>
-    case 'd8': return <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L4 12l8 10 8-10-8-10z" /><path d="M4 12h16M12 2v20" strokeOpacity="0.3" /></svg>
-    case 'd10': return <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L4 10l8 12 8-12-8-8z" /><path d="M12 2v20M4 10h16" strokeOpacity="0.3" /></svg>
-    case 'd12': return <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2l8 4v12l-8 4-8-4V6l8-4z" /><path d="M12 2v20M4 6l16 12M20 6L4 18" strokeOpacity="0.2" /></svg>
-    case 'd20': return <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2l9 7v6l-9 7-9-7V9l9-7z" /><path d="M12 2v20M3 9h18M3 15h18" strokeOpacity="0.2" /></svg>
+    case 'd4': return <GiD4 className={className} />
+    case 'd6': return <GiPerspectiveDiceSixFacesSix className={className} />
+    case 'd8': return <GiDiceEightFacesEight className={className} />
+    case 'd10': return <GiD10 className={className} />
+    case 'd12': return <GiD12 className={className} />
+    case 'd20': return <GiDiceTwentyFacesTwenty className={className} />
     case 'd100': return (
-      <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M12 2L4 10l8 12 8-12-8-8z" />
-        <text x="12" y="14" fontSize="6" textAnchor="middle" fill="currentColor" stroke="none" fontWeight="bold">%</text>
-      </svg>
+      <div className={`relative flex items-center justify-center ${className.replace('w-5 h-5', 'w-6 h-6')}`}>
+        <GiD10 className="absolute inset-0 w-full h-full opacity-60" />
+        <span className="relative z-10 text-[0.6em] font-bold mt-1">%</span>
+      </div>
     )
     default: return null
   }

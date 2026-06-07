@@ -145,21 +145,6 @@ export function SessionModal({ editTarget, defaultFolderId, onClose }: SessionMo
                 />
               </div>
 
-              <div className="space-y-2">
-                <label className="block text-xs font-semibold tracking-wider text-dark-300 uppercase">
-                  Pasta
-                </label>
-                <select
-                  value={formData.folder_id || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, folder_id: e.target.value ? Number(e.target.value) : undefined }))}
-                  className="input-field w-full"
-                >
-                  <option value="">Sem pasta (Raiz)</option>
-                  {folders.map(f => (
-                    <option key={f.id} value={f.id}>{f.name}</option>
-                  ))}
-                </select>
-              </div>
             </div>
 
             <div className="space-y-2 shrink-0">

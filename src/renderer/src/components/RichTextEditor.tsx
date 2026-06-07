@@ -8,11 +8,19 @@ import Link from '@tiptap/extension-link'
 import ImageExtension from '@tiptap/extension-image'
 import ImageResize from 'tiptap-extension-resize-image'
 import Mention from '@tiptap/extension-mention'
+import Highlight from '@tiptap/extension-highlight'
+import TaskList from '@tiptap/extension-task-list'
+import TaskItem from '@tiptap/extension-task-item'
 import tippy, { delegate } from 'tippy.js'
 import 'tippy.js/dist/tippy.css'
 import { getMentionSuggestion } from './mentionSuggestion'
 import type { MentionItem } from '../../../types'
-import { Bold, Italic, List, ListOrdered, Strikethrough, Underline as UnderlineIcon, AlignLeft, AlignCenter, AlignRight, Link as LinkIcon, Image as ImageIcon, Heading1, Heading2, Heading3 } from 'lucide-react'
+import { 
+  Bold, Italic, List, ListOrdered, Strikethrough, Underline as UnderlineIcon, 
+  AlignLeft, AlignCenter, AlignRight, Link as LinkIcon, Image as ImageIcon, 
+  Heading1, Heading2, Heading3, Quote, Code, Minus, CheckSquare, 
+  Highlighter, Undo2, Redo2, Eraser 
+} from 'lucide-react'
 
 interface RichTextEditorProps {
   content: string
@@ -40,6 +48,9 @@ export function RichTextEditor({
       Underline,
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Link.configure({ openOnClick: false }),
+      Highlight,
+      TaskList,
+      TaskItem.configure({ nested: true }),
       ImageResize.configure({
         inline: true
       }),
@@ -165,11 +176,11 @@ export function RichTextEditor({
     <div 
       ref={containerRef}
       onClick={handleEditorClick}
-      className={`flex flex-col w-full h-full flex-1 min-h-0 border rounded-none relative ${readOnly ? 'border-transparent' : 'border-white/20 bg-dark-900'}`}
+      className={`flex flex-col w-full h-full flex-1 min-h-0 border rounded-none relative ${readOnly ? 'border-transparent' : 'border-white/20 bg-dark-900/10 backdrop-blur-[1px]'}`}
     >
       {/* Toolbar */}
       {!readOnly && (
-        <div className="flex items-center gap-1 p-2 border-b border-white/10 bg-dark-950 flex-wrap shrink-0 sticky top-0 z-10">
+        <div className="flex items-center gap-1 p-2 border-b border-white/10 bg-dark-950/20 backdrop-blur-sm flex-wrap shrink-0 sticky top-0 z-10">
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
@@ -275,6 +286,52 @@ export function RichTextEditor({
           >
             <ListOrdered className="w-4 h-4" />
           </button>
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().toggleTaskList().run()}
+            className={`p-1.5 rounded-none text-dark-300 hover:text-white transition-colors ${editor.isActive('taskList') ? 'bg-white/10 text-white' : ''}`}
+            title="Lista de Tarefas"
+          >
+            <CheckSquare className="w-4 h-4" />
+          </button>
+
+          <div className="w-px h-4 bg-white/10 mx-1" />
+
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().toggleBlockquote().run()}
+            className={`p-1.5 rounded-none text-dark-300 hover:text-white transition-colors ${editor.isActive('blockquote') ? 'bg-white/10 text-white' : ''}`}
+            title="Citação"
+          >
+            <Quote className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+            className={`p-1.5 rounded-none text-dark-300 hover:text-white transition-colors ${editor.isActive('codeBlock') ? 'bg-white/10 text-white' : ''}`}
+            title="Bloco de Código"
+          >
+            <Code className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().setHorizontalRule().run()}
+            className="p-1.5 rounded-none text-dark-300 hover:text-white transition-colors"
+            title="Divisor"
+          >
+            <Minus className="w-4 h-4" />
+          </button>
+
+          <div className="w-px h-4 bg-white/10 mx-1" />
+
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().toggleHighlight().run()}
+            className={`p-1.5 rounded-none text-dark-300 hover:text-white transition-colors ${editor.isActive('highlight') ? 'bg-white/10 text-white' : ''}`}
+            title="Destacar Texto"
+          >
+            <Highlighter className="w-4 h-4" />
+          </button>
 
           <div className="w-px h-4 bg-white/10 mx-1" />
 
@@ -293,6 +350,35 @@ export function RichTextEditor({
             title="Inserir Imagem do Computador"
           >
             <ImageIcon className="w-4 h-4" />
+          </button>
+
+          <div className="w-px h-4 bg-white/10 mx-1" />
+
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().undo().run()}
+            disabled={!editor.can().undo()}
+            className="p-1.5 rounded-none text-dark-300 hover:text-white transition-colors disabled:opacity-30 disabled:hover:text-dark-300"
+            title="Desfazer"
+          >
+            <Undo2 className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().redo().run()}
+            disabled={!editor.can().redo()}
+            className="p-1.5 rounded-none text-dark-300 hover:text-white transition-colors disabled:opacity-30 disabled:hover:text-dark-300"
+            title="Refazer"
+          >
+            <Redo2 className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}
+            className="p-1.5 rounded-none text-dark-300 hover:text-white transition-colors"
+            title="Limpar Formatação"
+          >
+            <Eraser className="w-4 h-4" />
           </button>
         </div>
       )}

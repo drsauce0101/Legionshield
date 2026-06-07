@@ -53,6 +53,9 @@ function createTables(): void {
       title       TEXT NOT NULL,
       notes       TEXT DEFAULT '',
       tags        TEXT DEFAULT '',
+      moodboard   TEXT DEFAULT '[]', -- JSON string array
+      canvas      TEXT DEFAULT '{ "nodes": [], "edges": [] }', -- JSON ReactFlow state
+      folder_id   INTEGER REFERENCES folders(id) ON DELETE SET NULL,
       created_at  TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
     );
@@ -91,12 +94,12 @@ function createTables(): void {
 function runMigrations(): void {
   // Add avatar_url to players
   try {
-    db.run('ALTER TABLE players ADD COLUMN avatar_url TEXT DEFAULT ""')
+    db.run("ALTER TABLE players ADD COLUMN avatar_url TEXT DEFAULT ''")
   } catch (err) {}
   
   // Add attributes to players
   try {
-    db.run('ALTER TABLE players ADD COLUMN attributes TEXT DEFAULT "[]"')
+    db.run("ALTER TABLE players ADD COLUMN attributes TEXT DEFAULT '[]'")
   } catch (err) {}
 
   // Add folder_id to campaigns
@@ -117,6 +120,16 @@ function runMigrations(): void {
   // Add folder_id to tables
   try {
     db.run('ALTER TABLE tables ADD COLUMN folder_id INTEGER REFERENCES folders(id) ON DELETE SET NULL')
+  } catch (err) {}
+
+  // Add moodboard to sessions
+  try {
+    db.run("ALTER TABLE sessions ADD COLUMN moodboard TEXT DEFAULT '[]'")
+  } catch (err) {}
+
+  // Add canvas to sessions
+  try {
+    db.run("ALTER TABLE sessions ADD COLUMN canvas TEXT DEFAULT '{ \"nodes\": [], \"edges\": [] }'")
   } catch (err) {}
 }
 
@@ -331,4 +344,14 @@ export function updateFolder(id: number, data: any): any {
 
 export function deleteFolder(id: number): void {
   db.run('DELETE FROM folders WHERE id = ?', [id])
+}
+
+export function closeDatabase(): void {
+  if (db) {
+    try {
+      db.close()
+    } catch (err) {
+      console.error('Error closing database:', err)
+    }
+  }
 }

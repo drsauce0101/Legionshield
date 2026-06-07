@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react'
-import { ArrowLeft, Users, BookOpen, Plus, Settings, X, Hash, Dices, Trash2 } from 'lucide-react'
+import { ArrowLeft, Users, BookOpen, Plus, Settings, X, Hash, Dices, Trash2, ArrowUpLeft } from 'lucide-react'
 import { audioService } from '../utils/audio'
 import { useCampaignStore } from '../stores/useCampaignStore'
 import { PlayerModal } from './PlayerModal'
@@ -7,7 +7,10 @@ import { SessionModal } from './SessionModal'
 import { TableModal } from './TableModal'
 import { FolderModal } from './FolderModal'
 import { FolderCard } from './FolderCard'
+import { ConfirmModal } from './ConfirmModal'
 import { MultiTabEditor } from './MultiTabEditor'
+import { SessionMoodboard } from './SessionMoodboard'
+import { SessionCanvas } from './SessionCanvas'
 import { requestDiceRoll } from './DiceRoller'
 import { TableView } from './TableView'
 import { ContextMenu } from './ContextMenu'
@@ -45,7 +48,8 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
     updatePlayer,
     updateSession,
     updateTable,
-    updateFolder
+    updateFolder,
+    setDiceRollerHidden
   } = useCampaignStore()
 
   const { contextMenuProps, showContextMenu } = useContextMenu()
@@ -68,6 +72,17 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
 
   const [presentPlayerIds, setPresentPlayerIds] = useState<number[]>([])
   const [previewPlayer, setPreviewPlayer] = useState<Player | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  } | null>(null)
+
+  const [sessionViewTab, setSessionViewTab] = useState<'notes' | 'moodboard' | 'canvas'>('notes')
+  const [dragOverRoot, setDragOverRoot] = useState(false)
+
+  const isAnyModalOpen = sessionModalOpen || playerModalOpen || tableModalOpen || folderModalOpen || !!previewPlayer || !!deleteConfirm;
 
   // Reset folder when changing tabs
   useEffect(() => {
@@ -123,6 +138,7 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
   }, [activeCampaign, fetchPlayers, fetchSessions, fetchTables])
 
   useEffect(() => {
+    setSessionViewTab('notes')
     if (activeSession && !sessionModalOpen) {
       window.api.sessions.getPresentPlayers(activeSession.id)
         .then(setPresentPlayerIds)
@@ -131,6 +147,17 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
       setPresentPlayerIds([])
     }
   }, [activeSession?.id, sessionModalOpen])
+
+  useEffect(() => {
+    if (sessionViewTab === 'canvas') {
+      setDiceRollerHidden(true)
+    } else {
+      setDiceRollerHidden(false)
+    }
+    
+    // Cleanup on unmount or change
+    return () => setDiceRollerHidden(false)
+  }, [sessionViewTab, setDiceRollerHidden])
 
   const handleOpenPlayerNew = () => {
     setEditPlayerTarget(null)
@@ -167,7 +194,7 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
     setFolderModalOpen(true)
   }
 
-  const handleItemDrop = async (itemId: string, itemType: string, targetFolderId: number) => {
+  const handleItemDrop = async (itemId: string, itemType: string, targetFolderId: number | null) => {
     const id = Number(itemId)
     if (itemType === 'session') await updateSession(id, { folder_id: targetFolderId })
     else if (itemType === 'player') await updatePlayer(id, { folder_id: targetFolderId })
@@ -209,7 +236,7 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
   return (
     <div className="flex flex-1 min-h-0 relative">
       {/* ── Sidebar (Players / Sessions) ─────────────────────────────────── */}
-      <aside className="w-80 border-r border-white/20 bg-dark-950 flex flex-col z-20 shrink-0 relative">
+      <aside className="w-80 border-r border-white/20 bg-dark-950/40 backdrop-blur-md flex flex-col z-20 shrink-0 relative">
         <div className="p-4 border-b border-white/10 flex items-center gap-3">
           <button 
             onClick={() => {
@@ -311,6 +338,33 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
           {activeTab === 'sessions' && (
             <>
               <div className="space-y-1">
+                {currentFolderId && (
+                  <div 
+                    onDragOver={(e) => { e.preventDefault(); setDragOverRoot(true); }}
+                    onDragLeave={() => setDragOverRoot(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setDragOverRoot(false);
+                      const itemId = e.dataTransfer.getData('itemId');
+                      const itemType = e.dataTransfer.getData('itemType');
+                      handleItemDrop(itemId, itemType, currentFolder?.parent_id || null);
+                    }}
+                    className={`group p-3 border border-dashed transition-all flex items-center gap-3 mb-1 select-none cursor-pointer ${
+                      dragOverRoot 
+                        ? 'bg-white/10 border-white text-white scale-[1.02] shadow-2xl z-10' 
+                        : 'bg-dark-900/30 border-white/5 text-dark-500 hover:border-white/20'
+                    }`}
+                    onClick={() => setCurrentFolderId(currentFolder?.parent_id || null)}
+                  >
+                    <div className={`w-10 h-10 flex items-center justify-center transition-colors ${dragOverRoot ? 'bg-white text-black' : 'bg-white/5'}`}>
+                      <ArrowUpLeft className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.2em]">{currentFolder?.parent_id ? 'Mover para pasta pai' : 'Mover para Raiz'}</p>
+                      <p className="text-[9px] text-dark-600 font-bold uppercase">Solte para mover</p>
+                    </div>
+                  </div>
+                )}
                 {filteredFolders.map((folder) => (
                   <FolderCard 
                     key={folder.id} 
@@ -340,9 +394,15 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
                         showContextMenu(e, [
                           { label: 'Editar', icon: <Trash2 className="w-4 h-4" />, onClick: () => handleOpenSessionEdit(session) },
                           { label: 'Excluir', icon: <Trash2 className="w-4 h-4" />, onClick: () => {
-                            if (confirm(`Excluir sessão "${session.title}"?`)) {
-                              window.api.sessions.delete(session.id).then(() => fetchSessions(activeCampaign.id))
-                            }
+                            setDeleteConfirm({
+                              isOpen: true,
+                              title: 'Excluir Sessão',
+                              message: `Tem certeza que deseja excluir a sessão "${session.title}"? Esta ação não pode ser desfeita.`,
+                              onConfirm: () => {
+                                window.api.sessions.delete(session.id).then(() => fetchSessions(activeCampaign.id))
+                                setDeleteConfirm(null)
+                              }
+                            })
                           }, variant: 'danger' }
                         ])
                       }}
@@ -376,6 +436,33 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
           {activeTab === 'players' && (
             <>
               <div className="space-y-1">
+                {currentFolderId && (
+                  <div 
+                    onDragOver={(e) => { e.preventDefault(); setDragOverRoot(true); }}
+                    onDragLeave={() => setDragOverRoot(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setDragOverRoot(false);
+                      const itemId = e.dataTransfer.getData('itemId');
+                      const itemType = e.dataTransfer.getData('itemType');
+                      handleItemDrop(itemId, itemType, currentFolder?.parent_id || null);
+                    }}
+                    className={`group p-3 border border-dashed transition-all flex items-center gap-3 mb-1 select-none cursor-pointer ${
+                      dragOverRoot 
+                        ? 'bg-white/10 border-white text-white scale-[1.02] shadow-2xl z-10' 
+                        : 'bg-dark-900/30 border-white/5 text-dark-500 hover:border-white/20'
+                    }`}
+                    onClick={() => setCurrentFolderId(currentFolder?.parent_id || null)}
+                  >
+                    <div className={`w-10 h-10 flex items-center justify-center transition-colors ${dragOverRoot ? 'bg-white text-black' : 'bg-white/5'}`}>
+                      <ArrowUpLeft className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.2em]">{currentFolder?.parent_id ? 'Mover para pasta pai' : 'Mover para Raiz'}</p>
+                      <p className="text-[9px] text-dark-600 font-bold uppercase">Solte para mover</p>
+                    </div>
+                  </div>
+                )}
                 {filteredFolders.map((folder) => (
                   <FolderCard 
                     key={folder.id} 
@@ -405,9 +492,15 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
                         showContextMenu(e, [
                           { label: 'Editar', icon: <Trash2 className="w-4 h-4" />, onClick: () => handleOpenPlayerEdit(player) },
                           { label: 'Excluir', icon: <Trash2 className="w-4 h-4" />, onClick: () => {
-                            if (confirm(`Excluir jogador "${player.name}"?`)) {
-                              window.api.players.delete(player.id).then(() => fetchPlayers(activeCampaign.id))
-                            }
+                            setDeleteConfirm({
+                              isOpen: true,
+                              title: 'Excluir Jogador',
+                              message: `Tem certeza que deseja excluir o jogador "${player.name}"? Todos os dados associados serão removidos.`,
+                              onConfirm: () => {
+                                window.api.players.delete(player.id).then(() => fetchPlayers(activeCampaign.id))
+                                setDeleteConfirm(null)
+                              }
+                            })
                           }, variant: 'danger' }
                         ])
                       }}
@@ -444,6 +537,33 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
           {activeTab === 'tables' && (
             <>
               <div className="space-y-1">
+                {currentFolderId && (
+                  <div 
+                    onDragOver={(e) => { e.preventDefault(); setDragOverRoot(true); }}
+                    onDragLeave={() => setDragOverRoot(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setDragOverRoot(false);
+                      const itemId = e.dataTransfer.getData('itemId');
+                      const itemType = e.dataTransfer.getData('itemType');
+                      handleItemDrop(itemId, itemType, currentFolder?.parent_id || null);
+                    }}
+                    className={`group p-3 border border-dashed transition-all flex items-center gap-3 mb-1 select-none cursor-pointer ${
+                      dragOverRoot 
+                        ? 'bg-white/10 border-white text-white scale-[1.02] shadow-2xl z-10' 
+                        : 'bg-dark-900/30 border-white/5 text-dark-500 hover:border-white/20'
+                    }`}
+                    onClick={() => setCurrentFolderId(currentFolder?.parent_id || null)}
+                  >
+                    <div className={`w-10 h-10 flex items-center justify-center transition-colors ${dragOverRoot ? 'bg-white text-black' : 'bg-white/5'}`}>
+                      <ArrowUpLeft className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.2em]">{currentFolder?.parent_id ? 'Mover para pasta pai' : 'Mover para Raiz'}</p>
+                      <p className="text-[9px] text-dark-600 font-bold uppercase">Solte para mover</p>
+                    </div>
+                  </div>
+                )}
                 {filteredFolders.map((folder) => (
                   <FolderCard 
                     key={folder.id} 
@@ -473,9 +593,15 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
                         showContextMenu(e, [
                           { label: 'Editar', icon: <Trash2 className="w-4 h-4" />, onClick: () => handleOpenTableEdit(table) },
                           { label: 'Excluir', icon: <Trash2 className="w-4 h-4" />, onClick: () => {
-                            if (confirm(`Excluir tabela "${table.name}"?`)) {
-                              deleteTable(table.id)
-                            }
+                            setDeleteConfirm({
+                              isOpen: true,
+                              title: 'Excluir Tabela',
+                              message: `Tem certeza que deseja excluir a tabela "${table.name}"? Esta ação não pode ser desfeita.`,
+                              onConfirm: () => {
+                                deleteTable(table.id)
+                                setDeleteConfirm(null)
+                              }
+                            })
                           }, variant: 'danger' }
                         ])
                       }}
@@ -502,8 +628,10 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
       </aside>
 
       {/* ── Main Content (Editor) ────────────────────────────────────────── */}
-      <main className="flex-1 flex flex-col bg-dark-900 relative z-20">
-        {!activeSession && !activePlayer && !activeTable ? (
+      <main className="flex-1 flex flex-col bg-transparent relative z-20">
+        {isAnyModalOpen ? (
+          <div className="flex-1 animate-fade-in" />
+        ) : !activeSession && !activePlayer && !activeTable ? (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-dark-400 animate-fade-in">
             <BookOpen className="w-16 h-16 mb-4 opacity-20" />
             <h3 className="text-xl font-display text-white mb-2">Modo de Jogo</h3>
@@ -551,15 +679,72 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
                 </div>
               )}
             </header>
-            <div className="flex-1 overflow-y-auto p-8">
-              <div className="max-w-7xl mx-auto">
-                <MultiTabEditor 
-                  content={activeSession.notes} 
-                  onChange={handleSessionNotesChange} 
-                  placeholder="A aventura continua..."
-                  mentionItems={mentionItems}
-                  onMentionClick={handleMentionClick}
-                />
+            
+            {/* Session View Tabs */}
+            <div className="px-8 border-b border-white/5 flex gap-8">
+              <button 
+                onClick={() => { audioService.playClick(); setSessionViewTab('notes'); }}
+                className={`py-3 text-[10px] font-bold uppercase tracking-[0.2em] transition-all border-b-2 ${sessionViewTab === 'notes' ? 'border-white text-white' : 'border-transparent text-dark-500 hover:text-dark-300'}`}
+              >
+                Notas da Sessão
+              </button>
+              <button 
+                onClick={() => { audioService.playClick(); setSessionViewTab('moodboard'); }}
+                className={`py-3 text-[10px] font-bold uppercase tracking-[0.2em] transition-all border-b-2 ${sessionViewTab === 'moodboard' ? 'border-white text-white' : 'border-transparent text-dark-500 hover:text-dark-300'}`}
+              >
+                Moodboard
+              </button>
+              <button 
+                onClick={() => { audioService.playClick(); setSessionViewTab('canvas'); }}
+                className={`py-3 text-[10px] font-bold uppercase tracking-[0.2em] transition-all border-b-2 ${sessionViewTab === 'canvas' ? 'border-white text-white' : 'border-transparent text-dark-500 hover:text-dark-300'}`}
+              >
+                Canvas
+              </button>
+            </div>
+
+            <div className={`flex-1 min-h-0 ${sessionViewTab !== 'canvas' ? 'overflow-y-auto p-8 custom-scrollbar' : ''}`}>
+              <div className={`max-w-7xl mx-auto h-full flex flex-col ${sessionViewTab === 'canvas' ? 'p-8' : ''}`}>
+                {sessionViewTab === 'notes' ? (
+                  <MultiTabEditor 
+                    content={activeSession.notes} 
+                    onChange={handleSessionNotesChange} 
+                    placeholder="A aventura continua..."
+                    mentionItems={mentionItems}
+                    onMentionClick={handleMentionClick}
+                  />
+                ) : sessionViewTab === 'moodboard' ? (
+                  <SessionMoodboard 
+                    images={(() => {
+                      try {
+                        return JSON.parse(activeSession.moodboard || '[]')
+                      } catch {
+                        return []
+                      }
+                    })()}
+                    onChange={(newImages) => {
+                      if (activeSession) {
+                        updateSession(activeSession.id, { moodboard: JSON.stringify(newImages) })
+                      }
+                    }}
+                  />
+                ) : (
+                  <div className="flex-1 min-h-[600px] h-full">
+                    <SessionCanvas 
+                      data={(() => {
+                        try {
+                          return JSON.parse(activeSession.canvas || '{ "nodes": [], "edges": [] }')
+                        } catch {
+                          return { nodes: [], edges: [] }
+                        }
+                      })()}
+                      onChange={(newData) => {
+                        if (activeSession) {
+                          updateSession(activeSession.id, { canvas: JSON.stringify(newData) })
+                        }
+                      }}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -725,6 +910,16 @@ export function CampaignDashboard({ onBack }: CampaignDashboardProps): JSX.Eleme
         </div>
       )}
       {contextMenuProps.visible && <ContextMenu {...contextMenuProps} />}
+
+      <ConfirmModal 
+        isOpen={!!deleteConfirm}
+        title={deleteConfirm?.title || ''}
+        message={deleteConfirm?.message || ''}
+        confirmText="Excluir"
+        onConfirm={() => deleteConfirm?.onConfirm()}
+        onCancel={() => setDeleteConfirm(null)}
+        isDanger={true}
+      />
     </div>
   )
 }
